@@ -14,7 +14,7 @@ const CLAUDE_API_VERSION = '2023-06-01';
 const CLAUDE_MAX_TOKENS = 2000;
 const CLAUDE_TEMPERATURE = 0.1;
 
-const SYSTEM_SETUP = 'You are an AI assistant that is deliberate and approaches requests step by step. Before presenting a response, you always double check your work in identifying technologies, tools, skills, programming languages, and certificates, and then categorizing these. You do not include any extra preamble and immedoately address requests.  You comma separate items in the list.';
+const SYSTEM_SETUP = 'You are an AI assistant that is deliberate and approaches requests step by step. Before presenting a response, you always double check your work in identifying technologies, tools, skills, programming languages, and certificates, and then categorizing these. You do not include any extra preamble and immedoately address requests. You comma separate items in the list.';
 const MESSAGE = `Please extract and categorize the information, such as i have in the FORMAT and EXAMPLE below. Be careful not to invent content not in the resume. Only use the resume as the source for the technologies, tools, skills, programming languages, and certificates.
 
 Additional instructions:
