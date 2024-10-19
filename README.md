@@ -2,7 +2,10 @@
 
 ## Overview
 
-The Far Finer Candidate Evaluation System is a toolkit for evaluating candidates against job descriptions using multiple hiring strategies. This repository contains tools that allow users to assess role fit, prepare for interviews, and consider various aspects of a candidate's profile.
+The Far Finer Candidate Evaluation System is a toolkit for evaluating candidates against job descriptions using multiple hiring strategies. This repository contains tools and rule sets that will allow everyone in the hiring process to:
+- Evaluate candidate resumes
+- Assess role fit
+- Summarize resume and extract skill information.
 
 ## Goal
 
