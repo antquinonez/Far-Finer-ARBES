@@ -6,7 +6,7 @@ The Far Finer Candidate Evaluation System is a toolkit for evaluating candidates
 
 ## Goal
 
-To create a set of AI-powered tools, evaluation methods, and hiring strategy rules to help evaluate how well a candidate fits a role.
+To create a set of AI-powered tools, evaluation methods, and hiring strategy rules to evaluate candidates to roles using multiple hiring strategies.
 
 ## Features
 
@@ -76,7 +76,6 @@ A set of hiring strategies. Lesson: There's more than one way to hire someone.
 ##### API
 1) Include the rule set in the system instructions, preferrably using an AI API that uses caching. See the FFAnthropicCached class in my [Far Finer AI Clients Library](https://github.com/antquinonez/Far-Finer-AI-Clients).
 2) See the `Prompt Templates` folder for prompts. I reccomend you run the strategies one at a time. So, for example, create the AI client with the system instructions and strategies. Include the candidate data (preferrably the resulting JSON from the FF Candidate Evaluation Rules) as JSONL strings for efficient prompt space utilization. Then ask for an evaluation of Strategy X. Repeat with the other strategies that you need. or ask for all of them at once. You get longer responses from doing one at a time though.  
-
 
 ## Future Development
 
