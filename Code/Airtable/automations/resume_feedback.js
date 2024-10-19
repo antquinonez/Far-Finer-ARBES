@@ -11,11 +11,11 @@ const CLAUDE_API_KEY = 'XXXXXXX';
 
 const CLAUDE_MODEL = 'claude-3-5-sonnet-20240620';
 const CLAUDE_API_VERSION = '2023-06-01';
-const CLAUDE_MAX_TOKENS = 1000;
+const CLAUDE_MAX_TOKENS = 4000;
 const CLAUDE_TEMPERATURE = 0.6;
 
-const SYSTEM_SETUP = 'You are an AI assistant that provides feedback on resume content. Analyze the resume text provided. ';
-const MESSAGE = 'I am an HR professional evaluating the quality of resumes. Please suggest improvements based on this resume text. Do not provide feedback on formatting. Add a section for grammar and spelling mistakes.';
+const SYSTEM_SETUP = 'You are an AI assistant that is deliberate and approaches requests step by step. Before presenting a response, you always double check your work when you provide feedback on resume content. You do not include any extra preamble and immediately address requests.';
+const MESSAGE = 'I am an HR professional evaluating the quality of resumes. Please suggest improvements based on this resume text. Do not provide feedback on formatting, but do address overall structure and placement of information. In your evaluation, add a section for grammar and spelling mistakes.';
 
 /**
  * Fetches the resume text from the given URL.
