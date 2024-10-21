@@ -1,0 +1,767 @@
+{
+    "rating_overall": {
+        "Weight": "Not Applicable",
+        "Description": "overall rating",
+        "Type": "Principal",
+        "Name": "rating_overall",
+        "value_type": "Text",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "Using the value from the attribute 'overall\\_score', determine a rating.\n\n\\[9-10]: exceptional\n[8-9): very high\n[7-8): high\n[6-7): average\nunder 6: poor"
+    },
+    "skills_df": {
+        "Weight": "Not Applicable",
+        "Description": "Be exhaustive. List all the technical and professional skills. Use the resume/ interview evaluations/ code evaluations. Provide information on the source for the information.\nLABELS AND SCORES\n==================\nUse labels to describe the quality of the information. \n-- verified: (if the evaluation was performed on the basis of a code base evaluation or was validated in an interview evaluation). score:10\n-- verifiable: if there's a URL or certificate id present and the certificate in itself demonstrates the skill. score: 10\u00a0\n-- detailed: (if referenced in the context of a role or project). score: 7\n-- listed: if the skill is part of a list but for which there is no context. score:5\n\nnote: Only include an item in source IF we actually have content originating from that source.",
+        "Type": "Technical",
+        "Name": "skills_df",
+        "embedded_schema": "skill: text\ntype: text\nlabels: list of text\nscore: integer\nsource: text\nsource: text",
+        "Sub_Type": "Skill",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes:\n-- skill:\n-- type: technical, professional, language, artistic, etc\n-- labels:\n-- score:\n-- source:\nsource\\_details:"
+    },
+    "degrees_df": {
+        "Weight": "Not Applicable",
+        "Description": "Higher education degrees",
+        "Type": "Core",
+        "Name": "degrees_df",
+        "value_type": "List",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes\n-- degree: of(AA, BA, AB, MA, MS, PhD, etc)\n-- major:\n-- institution\n-- year\\_of\\_graduation:"
+    },
+    "residence_state": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "United States state as can be determined by residence address, telephone  area code, or location of latest onsite employer; for example, Washington, California, New York",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "residence_state",
+        "value_type": "Text"
+    },
+    "has_scrum_master_exp": {
+        "Sub_Type": "None",
+        "Weight": "8",
+        "Description": "Has held a scrum master role. To be eligible, person must have held a title with scrum master in the name.",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_scrum_master_exp",
+        "value_type": "Boolean"
+    },
+    "consulting_firm_experience_df": {
+        "Weight": "Not Applicable",
+        "Description": "Job experience acquired thru consulting assignments. Only include if work is done for recognized consulting firms.",
+        "Type": "Core",
+        "Name": "consulting_firm_experience_df",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "Specification": "When the candidate resume includes work at a consulting firm, take into account the roles within that consulting firm to capture those company experiences. The term \"consult\" is required in order for it to be considered consulting work. Answer: \"Yes\" or No\" and provide a summary.",
+        "is_contribute_rating_overall": "False"
+    },
+    "has_tableau": {
+        "Weight": "3",
+        "Description": "Has Tableau experience? Tableau is the reporting tool.",
+        "Type": "Technical",
+        "Name": "has_tableau",
+        "Sub_Type": "Skill",
+        "value_type": "Boolean",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "skill_opportunities_for_improvement_df": {
+        "Weight": "Not Applicable",
+        "Description": "Given the person's experience and skills, what five areas exist for personal and professional development that would make the person a better practitioner? If their toolset is dated, what newer tools and technologies make sense for their areas of practice?\n\nWe're looking for suggestions to enhance obvious gaps in their tool set.\n\nFor example:\n-- If the person has only one programming language, they could learn another one.\n--  If the person knows only relational database, they could learn a document database or a graph database.",
+        "Type": "Technical",
+        "Name": "skill_opportunities_for_improvement_df",
+        "embedded_schema": "-- area_for_improvement: Text\n-- recommendation: Text\n-- level_of_effort_required:Integer (1-10)\n-- benefit from improvement: Text\n\nattribute_name: Textinit_rating:Integer\ninit_eval:Text\nrevised_possible_rating:Integer\nrevised_possible_eval:Text",
+        "Sub_Type": "Skill",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes:\n-- area\\_for\\_improvement:\n-- recommendation:\n-- level\\_of\\_effort\\_required:\n-- benefit\\_from\\_improvement:\n-- attributes\\_affected: {\nattribute\\_name:\ninit\\_rating:\ninit\\_eval:\nrevised\\_possible\\_rating:\nrevised\\_possible\\_eval:\n}"
+    },
+    "rating_interview_evaluations": {
+        "Weight": "30",
+        "Description": "What's the summary evaluation of the candidate? Takes into account all available interview evaluations.",
+        "Type": "Core",
+        "Name": "rating_interview_evaluations",
+        "Sub_Type": "None",
+        "value_type": "Decimal",
+        "is_contribute_rating_overall": "True",
+        "Specification": "0 absolutely not; 2 needs work; 4 acceptable; 6 experienced; 8  high performer; 10 exceptional;  -1 if no candidate evaluation is available.\n\nIf -1, do not include it in the overall\\_rating."
+    },
+    "strategic_impact_df": {
+        "Weight": "Not Applicable",
+        "Description": "Work history strategic impacts; for example: transitioned company to first position in Cloud Computing. These are outsized accomplishments, taking credit for very large  wins. Only look at past 7 years. Do not include work that could be taken as routine for the role.",
+        "Type": "Core",
+        "Name": "strategic_impact_df",
+        "value_type": "List",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes:\n-- achievement:\n-- job title:\n-- employer:\n-- client:"
+    },
+    "company_count_last_5_years": {
+        "Weight": "Not Applicable",
+        "Description": "How many companies has the person worked for in the past 5 years?",
+        "Type": "Core",
+        "Name": "company_count_last_5_years",
+        "Sub_Type": "None",
+        "value_type": "Integer",
+        "is_contribute_rating_overall": "False",
+        "Specification": "Return -1 if does not have 5 years of work experience."
+    },
+    "social_media_github": {
+        "Weight": "Not Applicable",
+        "Description": "Github profile URL as can be determined from available resources",
+        "Type": "Basic",
+        "Name": "social_media_github",
+        "Sub_Type": "None",
+        "value_type": "Text",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "has_fullstack_webdev_exp": {
+        "Weight": "Not Applicable",
+        "Description": "Does candidate have web development fullstack experience? Fullstack means that someone has the ability to use not just a web programming language but also has the ability to create APIs, work with a variety of database types, document and relational, for example; has experience with a web development framework, and has experience with a backend framework, such as node.js or Java Spring.",
+        "Type": "Technical",
+        "Name": "has_fullstack_webdev_exp",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "is_contribute_rating_overall": "False"
+    },
+    "is_resume_right_length": {
+        "Weight": "Not Applicable",
+        "Description": "Evaluate resume for length. We don't want it to be too short or too long. Include resume length in eval field.",
+        "Type": "Resume Evaluation",
+        "Name": "is_resume_right_length",
+        "value_type": "Boolean",
+        "Sub_Type": "Negatives",
+        "is_contribute_rating_overall": "False",
+        "Specification": "Set to False if resume is less than 500 word or is more than 3000 words. Else set to True."
+    },
+    "rating_quality_of_work_roles": {
+        "Weight": "10",
+        "Description": "Look at titles and roles. More senior roles, prestige roles have more value.",
+        "Type": "Core",
+        "Name": "rating_quality_of_work_roles",
+        "value_type": "Decimal",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "True",
+        "Specification": "Use a scale 0 - 10 to provide an aggregate evaluation the quality of all the candidate's work roles for the past 7 years."
+    },
+    "has_linkedin": {
+        "Weight": "10",
+        "Description": "Shows professionalism. A resume in the modern day must have a LinkedIn link. The presence of a LinkedIn profile in the resume allows us to look up their profile and see that it closely matches the resume.",
+        "Type": "Core",
+        "Name": "has_linkedin",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "is_contribute_rating_overall": "True",
+        "Specification": ""
+    },
+    "residence_country": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Country name as can be determined by residence address, phone area code, or location of latest onsite employer; for example, United States, Canada, Mexico",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "residence_country",
+        "value_type": "Text"
+    },
+    "quality_of_educational_institutions_df": {
+        "Weight": "Not Applicable",
+        "Description": "Evaluates reputation and latest rank of the higher education schools, only include educational institutions where the applicant received an undergraduate, graduate, or doctorate level degree; do not include institutions where applicant received a certificate or did not graduate. Use a scale 0-10, 0 for no higher education. 10 being most prestigious. Use latest, most accepted, authoritative data available when evaluating the institutions. Use 0 for no higher education.",
+        "Type": "Experience",
+        "Name": "quality_of_educational_institutions_df",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes:\ninstitute\\_name:\nvalue: rating\neval:"
+    },
+    "has_pmo_cert": {
+        "Sub_Type": "Skill",
+        "Weight": "9",
+        "Description": "Has PMO Project Management Cert?",
+        "Type": "Technical",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_pmo_cert",
+        "value_type": "Boolean"
+    },
+    "dark_materials_reasons_no_eval_df": {
+        "Weight": "Not Applicable",
+        "Description": "Hiring managers are capable of discrimination. What common discriminatory reasons should we be looking out for? For example; too young, too old, military service, sexual orientation, any attributes that could disqualify someone based on pre conceived notions.\n\nFurther examples: \nEthnicity-based discrimination -- which could lead to ethnic stereotyping or bias.\nEducation elitism -- might lead to positive bias or overshadow other qualifications\nOverqualification bias -- might lead some hiring managers to consider them overqualified for certain positions\nGender bias -- which could lead to gender-based assumptions or biases in male-dominated tech fields.\nHalo/Horn effect: Allowing one positive or negative trait to influence overall perception of a candidate.\nName bias: Making assumptions based on a candidate's name, which can intersect with ethnic and gender biases.\nAppearance bias: Judging candidates based on physical appearance, grooming, or style of dress rather than qualifications.",
+        "Type": "Dark",
+        "Name": "dark_materials_reasons_no_eval_df",
+        "value_type": "List",
+        "Sub_Type": "Negatives",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of 5 dictionaries, sorted by most insidious. Dictionary attributes:\n-- negative: Potential bias that could be demonstrated by a hiring manager?\n-- eval: Describe this bias\n-- rating:In a scale of 1-10, how significant of a risk is this for the candidate to be considered?\n-- remediation: How can we overcome this fault?"
+    },
+    "has_cybersecurity_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "This can be inferred from someone's work experience, if pervasive, job title, and certification.",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_cybersecurity_exp",
+        "value_type": "Boolean"
+    },
+    "preferred_name": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "The person's name as it appears in the resume.",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "preferred_name",
+        "value_type": "Text"
+    },
+    "has_github": {
+        "Weight": "10",
+        "Description": "Indicates level of seriousness about coding and IT project work in general.",
+        "Type": "Technical",
+        "Name": "has_github",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "is_contribute_rating_overall": "False",
+        "Specification": "Identify if a candidate has a github account."
+    },
+    "has_cloud_exp": {
+        "Weight": "3",
+        "Description": "AWS, GCP, Azure, etc",
+        "Type": "Experience",
+        "Name": "has_cloud_exp",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "rating_role_data_and_analytics": {
+        "Weight": "Not Applicable",
+        "Description": "Role overall rating",
+        "Type": "Role",
+        "Name": "rating_role_data_and_analytics",
+        "Sub_Type": "Data and Analytics",
+        "value_type": "Integer",
+        "Specification": "range: 1-10\n\nOnly use Sub-Type 'Data and Analytics' ratings as source",
+        "is_contribute_rating_overall": "False"
+    },
+    "resume_opportunities_for_improvement_df": {
+        "Weight": "Not Applicable",
+        "Description": "Given the person's experience and skills, what five areas of professional improvement exist that would make the person a better candidate for roles where they're qualified. We're not looking for crazy stretch goals; just the application of effort to bridge gaps and get the person on track for career growth. For example: Add achievements,Learn another programming language, get certification in more relevant and desirable technology, Get re-certified for an expired certificate",
+        "Type": "Resume Evaluation",
+        "Name": "resume_opportunities_for_improvement_df",
+        "embedded_schema": "-- area_for_improvement: Text\n-- recommendation: Text\n-- level_of_effort_required:Integer (1-10)\n-- benefit from improvement\n\nattribute_name: Textinit_rating:Integer\ninit_eval:Text\nrevised_possible_rating:Integer\nrevised_possible_eval:Text",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes:\n-- area\\_for\\_improvement:\n-- recommendation:\n-- level\\_of\\_effort\\_required:\n-- benefit\\_from\\_improvement:\n-- attributes\\_affected: {\nattribute\\_name:\ninit\\_rating:\ninit\\_eval:\nrevised\\_possible\\_rating:\nrevised\\_possible\\_eval:\n}"
+    },
+    "is_resume_fraudulent": {
+        "Weight": "Not Applicable",
+        "Description": "Determine if person is who they say they are. Are they using a fictional name? Is their LinkedIn profile substantially match their resume? Does the resume substantially duplicate the content of many other resumes?",
+        "Type": "Resume Evaluation",
+        "Name": "is_resume_fraudulent",
+        "Sub_Type": "Negatives",
+        "value_type": "Boolean",
+        "is_contribute_rating_overall": "False"
+    },
+    "work_history_performance_metrics_df": {
+        "Weight": "Not Applicable",
+        "Description": "Work history achievements; for example, sales figures, project completion rates, money saved, etc. Only look at past 7 years.",
+        "Type": "Core",
+        "Name": "work_history_performance_metrics_df",
+        "value_type": "List",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes\n-- achievement: Quantified achievement\n-- job title: Job title held associated with achievement\n-- employer:\n-- client:"
+    },
+    "has_data_analyst_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Includes reporting, data analysis, business intelligence experience. Experience can be inferred from background that includes a set of multiple data analysts skills: SQL, Tableau, Power BI, Microstrategy, etc.",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_data_analyst_exp",
+        "value_type": "Boolean"
+    },
+    "has_jupyter": {
+        "Weight": "3",
+        "Description": "AKA, Jupyter Notebooks",
+        "Type": "Technical",
+        "Name": "has_jupyter",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "latest_employer": {
+        "Weight": "Not Applicable",
+        "Description": "Latest employment role.",
+        "Type": "Core",
+        "Name": "latest_employer",
+        "Sub_Type": "None",
+        "value_type": "Dictionary",
+        "Specification": "Attributes:\n-- employer\n-- clients\n-- title\n-- job\\_description\n-- dates",
+        "is_contribute_rating_overall": "False"
+    },
+    "rating_quality_of_work_experience": {
+        "Weight": "10",
+        "Description": "Look at job accomplishments. Impact and high efforts should be highly regarded, as are examples of routine work expected of the role.",
+        "Type": "Core",
+        "Name": "rating_quality_of_work_experience",
+        "Sub_Type": "None",
+        "value_type": "Decimal",
+        "Specification": "Rate the overall quality of all the candidate's work experience using a scale 0-10.",
+        "is_contribute_rating_overall": "True"
+    },
+    "has_graph_database_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Type": "Technical",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_graph_database_exp",
+        "value_type": "Boolean"
+    },
+    "_meta_cant_be_evaluated_df": {
+        "Weight": "Not Applicable",
+        "Description": "Stores a list of dictionaries of fields (Name) that cannot be evaluated",
+        "Type": "_meta",
+        "Name": "_meta_cant_be_evaluated_df",
+        "Sub_Type": "Not Applicable",
+        "value_type": "List",
+        "Specification": "[{name:field, eval:Why could not be evaluated}]",
+        "is_contribute_rating_overall": "False"
+    },
+    "residence_metro_area": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "For example: Seattle, New York, Los Angeles. Use telephone area code, address in resume/other data sources",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "residence_metro_area",
+        "value_type": "Text"
+    },
+    "rating_overall_score": {
+        "Weight": "Not Applicable",
+        "Description": "overall score",
+        "Type": "Principal",
+        "Name": "rating_overall_score",
+        "value_type": "Decimal",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "Using ratings and weights for attributes of Type 'Core', calculate an aggregate rating. Scale 0-10\n\nUse decimal rating; for example, 9.8"
+    },
+    "rating_active_learning": {
+        "Weight": "10",
+        "Description": "Rates certifications from the past 3 years, involvement in continuing education classes, personal projects, involvement in emerging technologies, etc. While active learning can take place within work, it's primarily meant to identify involvement in work that pushes the boundaries of the job title or role.",
+        "Type": "Core",
+        "Name": "rating_active_learning",
+        "Sub_Type": "None",
+        "value_type": "Decimal",
+        "is_contribute_rating_overall": "True",
+        "Specification": "0 for no sign of active learning.\n\n1-2 for slight sign of active learning; for example, indications that they are familiar with some newer technology or idea, but not actively pursuing it.\n\n10 for extensive active learning; 10 for actively pursuing a degree beyond Bachelors. Active learning include personal projects, book learning,  publishing, earned certificates and degrees within the past 36 months, articles. If the resume refers to specific projects, presentations, articles, these are signs of active learning. Personal projects that exercise cloud or newer technologies, this is a sign of active learning."
+    },
+    "has_programming_exp": {
+        "Weight": "5",
+        "Description": "Can they program?",
+        "Type": "Experience",
+        "Name": "has_programming_exp",
+        "value_type": "Boolean",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": ""
+    },
+    "resume_experience_negatives_df": {
+        "Weight": "Not Applicable",
+        "Description": "How is resume insufficient in terms of length, work experience details, achievements, etc",
+        "Type": "Resume Evaluation",
+        "Name": "resume_experience_negatives_df",
+        "value_type": "List",
+        "Sub_Type": "Negatives",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes:\n-- negative: What's the problem/issue?\n-- eval: Explain why this is a significant fault \n-- rating:In a scale of 1-10, how significant of a fault is this?\n-- remediation: How can we overcome this fault?"
+    },
+    "has_python_exp": {
+        "Weight": "3",
+        "Description": "Does person have Python Programming experience?",
+        "Type": "Technical",
+        "Name": "has_python_exp",
+        "Sub_Type": "Skill",
+        "value_type": "Boolean",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "company_count_last_10_years": {
+        "Weight": "Not Applicable",
+        "Description": "How many companies has the person worked for in the past 10 years?",
+        "Type": "Core",
+        "Name": "company_count_last_10_years",
+        "Sub_Type": "None",
+        "value_type": "Integer",
+        "is_contribute_rating_overall": "False",
+        "Specification": "Return -1 if does not have 10 years of work experience"
+    },
+    "pm_months_experience": {
+        "Weight": "Not Applicable",
+        "Description": "Months doing project management, including technical project management. Include all roles with 'project management' in the title",
+        "Type": "Role",
+        "Name": "pm_months_experience",
+        "Sub_Type": "Project_Management",
+        "value_type": "Integer",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "has_data_management_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Involves collecting, organizing, and protecting an organization's data. It covers storage, security, quality control, governance, and analytics. This practice ensures data accuracy, accessibility, and usability, enabling informed decision-making and operational improvements. Someone with reporting or business intelligence experience, without other experience, does not have data management experience.",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_data_management_exp",
+        "value_type": "Boolean"
+    },
+    "quality_of_educational_institutions": {
+        "Weight": "10",
+        "Description": "Evaluates reputation and latest rank of the higher education schools, only include educational institutions where the applicant received an undergraduate, graduate, or doctorate level degree; do not include institutions where applicant received a certificate or did not graduate. Use a scale 0-10, 0 for no higher education. 10 being most prestigious. Use latest, most accepted, authoritative data available when evaluating the institutions. Use 0 for no higher education.",
+        "Type": "Core",
+        "Name": "quality_of_educational_institutions",
+        "value_type": "Decimal",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "True",
+        "Specification": ""
+    },
+    "has_non_american_university": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "A non American university may lead to a bias from ignorance of the prestige of these universities",
+        "Type": "Dark",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_non_american_university",
+        "value_type": "Boolean"
+    },
+    "pm_months_of_experience_rating": {
+        "Weight": "10",
+        "Description": "Specific to roles from roles\\_in\\_project\\_management\\_df",
+        "Type": "Role",
+        "Name": "pm_months_of_experience_rating",
+        "Sub_Type": "Project_Management",
+        "value_type": "Integer",
+        "Specification": "less than 1 year, 1\n1-2, 2\n2-3, 3\netc\n10 or more years, 10",
+        "is_contribute_rating_overall": "False"
+    },
+    "has_webdev_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Has experience with web development? For example, with Typescript, Javascript, React, Angular, etc. This is someone that we can identify as being abale to develop a website",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_webdev_exp",
+        "value_type": "Boolean"
+    },
+    "has_technical_degree": {
+        "Weight": "Not Applicable",
+        "Description": "Has a Bachelor or greater degree in a technical field; for example, math, computer science, electrical engineering, etc",
+        "Type": "Experience",
+        "Name": "has_technical_degree",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "is_contribute_rating_overall": "False"
+    },
+    "is_person_us_based": {
+        "Weight": "Not Applicable",
+        "Description": "Determine if possible if the person is not US based.",
+        "Type": "Basic",
+        "Name": "is_person_us_based",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "Specification": "Evaluate if possible whether the person is US based. Look at the phone number, indicators of where they were based. Evaluate the combination of direct employers, whether role was remote; language skills, etc. Provide a Yes or no answer.",
+        "is_contribute_rating_overall": "False"
+    },
+    "rating_resume_communication_quality": {
+        "Weight": "10",
+        "Description": "Evaluate the resume writing quality. Consider spelling and communication quality. The writer may have had to condense and use elision to fit content into a resume format so keep that in mind. Scale of 0-10",
+        "Type": "Core",
+        "Name": "rating_resume_communication_quality",
+        "value_type": "Decimal",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "True",
+        "Specification": ""
+    },
+    "has_erp_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_erp_exp",
+        "value_type": "Boolean"
+    },
+    "email_address": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Email address as can be determined from available resources",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "email_address",
+        "value_type": "Text"
+    },
+    "roles_in_project_management_df": {
+        "Weight": "Not Applicable",
+        "Description": "Roles in project management.",
+        "Type": "Role",
+        "Name": "roles_in_project_management_df",
+        "embedded_schema": "-- clients: Text",
+        "Sub_Type": "Project_Management",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes:\n-- role: job title\n-- months: count of months\n-- company:\n-- clients:\n-- date\\_range:\n\nif months cannot be determined, then set months to 0; round up months, so 1/2023 - 3/2023 is 3 months"
+    },
+    "has_consulting_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Has this person worked in the role of a consultant?",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_consulting_exp",
+        "value_type": "Boolean"
+    },
+    "roles_in_analytics_role_df": {
+        "Weight": "Not Applicable",
+        "Description": "Analytics roles includes reporting, data analyst, data engineer, database programmer, role that mentions SQL, etc",
+        "Type": "Role",
+        "Name": "roles_in_analytics_role_df",
+        "Sub_Type": "Data and Analytics",
+        "value_type": "List",
+        "Specification": "Return dictionaries of {role: , months:, date\\_range:, company:}\n\nif months cannot be determined, then set months to 0. Rounds months up; for example 1/2023 - 3/2023 is 3 months.",
+        "is_contribute_rating_overall": "False"
+    },
+    "skill_diversity": {
+        "Weight": "10",
+        "Description": "Measure variety and volume of skills across multiple work related and valuable functions. Consider technical, interpersonal, and leadership domains. Also include knowledge of foreign languages.",
+        "Type": "Core",
+        "Name": "skill_diversity",
+        "Sub_Type": "None",
+        "value_type": "Decimal",
+        "is_contribute_rating_overall": "True",
+        "Specification": "Use a scale 0 - 10 to provide an aggregate measure of the candidate's variety and volume of skills"
+    },
+    "degree_class": {
+        "Weight": "10",
+        "Description": "A rating representing the college degree earned by a person",
+        "Type": "Core",
+        "Name": "degree_class",
+        "Sub_Type": "None",
+        "value_type": "Integer",
+        "is_contribute_rating_overall": "True",
+        "Specification": "0 for no higher education\n2-5 for certificates, depending on recognized level of difficulty and level from Associate to Professional (or something similar)\n3 for AA\n5 for BA\n7 for Masters, 10 for PhD"
+    },
+    "independent_projects_df": {
+        "Weight": "10",
+        "Description": "Independent projects may include extra curricular activities that imply applied technical, project management, leadership, consulting, publishing, side careers, side hustles, board memberships, volunteer work.",
+        "Type": "Core",
+        "Name": "independent_projects_df",
+        "Sub_Type": "None",
+        "value_type": "Boolean",
+        "is_contribute_rating_overall": "True",
+        "Specification": "List of dictionaries. Attributes:\n-- project\\_name\n-- role\n-- project\\_type: List of (technical, volunteer, publishing, board membership)\n-- organization: Use 'self' if not done for an organization\n-- dates\\_of\\_activity"
+    },
+    "leadership_experience_df": {
+        "Weight": "Not Applicable",
+        "Description": "Experience both professional and volunteer that demonstrates leadership capabilities. Provide any average or total or aggregate scores in the value column, and not in the evaluation column",
+        "Type": "Core",
+        "Name": "leadership_experience_df",
+        "value_type": "List",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes:\nrole:\n-- description\\_of\\_activities:\n-- organization:\n-- dates\\_active:"
+    },
+    "has_nosql": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Has experience with NoSQL databases",
+        "Type": "Technical",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_nosql",
+        "value_type": "Boolean"
+    },
+    "communication_skills_df": {
+        "Weight": "Not Applicable",
+        "Description": "Communication skills demonstrated through formal writing, resume (take into account the quality and structure of the resume and how it compares relative to current professional standards), public presentations, etc. Provide an aggregate score.",
+        "Type": "Core",
+        "Name": "communication_skills_df",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "Specification": "Evaluate the candidate's communication skills as demonstrated through formal writing, resume (take into account the structure of the resume and how it compares relative to current professional standards), public presentations, etc.  Score each skill using a scale 1-10 and then provide an aggregate score summing up the candidate's communication skills overall and provide this aggregate score first in the value column\nList of dictionaries. Ordered by highest impact. \nskill:\nsource:",
+        "is_contribute_rating_overall": "False"
+    },
+    "has_agile_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Has worked in scrum /agile team or has agile/scrum certification.",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_agile_exp",
+        "value_type": "Boolean"
+    },
+    "rating_role_project_management": {
+        "Weight": "Not Applicable",
+        "Description": "Role overall rating",
+        "Type": "Role",
+        "Name": "rating_role_project_management",
+        "Sub_Type": "Project_Management",
+        "value_type": "Integer",
+        "Specification": "1-10, only use fields with a of Sub-Type 'Project Management'.",
+        "is_contribute_rating_overall": "False"
+    },
+    "role_experience_df": {
+        "Weight": "Not Applicable",
+        "Description": "By role type, number of years (fractional). Roles are reductive to their main role. Examples: Developer, Project Manager, Product Manager -- and not Sr. Project Manager, L2 Software Engineer, Staff Engineer, Assistant Product Manager.",
+        "Type": "Basic",
+        "Name": "role_experience_df",
+        "value_type": "List",
+        "Sub_Type": "None",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes:\n-- role\\_type: for example, project manager\n-- years\\_of\\_experience: for example, 1.5"
+    },
+    "technical_gaps_df": {
+        "Weight": "Not Applicable",
+        "Description": "For the role type in which the person has functioned, what technical and skill gaps exist that stand out? For example Candidate identifies as a data engineer but SQL is nowhere found in candidate evaluation material (resume, code, project, articles, etc)",
+        "Type": "Core",
+        "Name": "technical_gaps_df",
+        "value_type": "List",
+        "Sub_Type": "Negatives",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries (max 5; sort by most serious fault). Attributes: \n-- gap\\_type: for example, certificate, technology, skill\n-- gap: eg, SQL\n-- severity: 1-10 (10 being highest)\n-- eval: eg, mentions data engineer but SQL not mentioned in resume"
+    },
+    "has_sql": {
+        "Weight": "3",
+        "Description": "Has SQL experience based on listing of SQL or any relational database product",
+        "Type": "Technical",
+        "Name": "has_sql",
+        "Sub_Type": "Skill",
+        "value_type": "Boolean",
+        "Specification": "",
+        "is_contribute_rating_overall": "False"
+    },
+    "social_media_personal": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "Personal website URL as can be determined from available resources",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "social_media_personal",
+        "value_type": "Text"
+    },
+    "has_document_database_exp": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Type": "Technical",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_document_database_exp",
+        "value_type": "Boolean"
+    },
+    "eligible_roles_df": {
+        "Weight": "Not Applicable",
+        "Description": "List of roles person can perform. Of (Scrum Master, Agile Coach, Release Engineer, Product Owner, Project Manager, Technical Project Manager, Program Manager, Change Manager, ERP Specialist,  Business Intelligence Analyst, Data Engineer, Cybersecurity Specialist,  Full Stack Developer\nInstruction to AI: Identify other roles not in the list",
+        "Type": "Core",
+        "Name": "eligible_roles_df",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes of:\n-- role: \n-- rating: (of 1-10) ,\n-- type: of('predefined' if role is from the 'Attribute Description'; else, 'Other')\n-- eval: [extended evaluation text. No more than 100 words]}"
+    },
+    "has_project_management_exp": {
+        "Sub_Type": "None",
+        "Weight": "8",
+        "Description": "Has held a project management role. To be eligible, person must have held a title with project manager or program manager in the name. DO NOT INCLUDE OTHER ROLES.",
+        "Type": "Experience",
+        "is_contribute_rating_overall": "False",
+        "Name": "has_project_management_exp",
+        "value_type": "Boolean"
+    },
+    "quality_of_educational_institutions_for_degree_df": {
+        "Weight": "Not Applicable",
+        "Description": "Evaluate the reputation and latest rank of the higher education schools considering only the program in which received their degree (for example Law, Physical Therapy, Dentistry).\nOnly include educational institutions where the applicant received an undergraduate, graduate, or doctorate level degree; do not include institutions where applicant received a certificate or did not graduate. Use a scale 0-10, 0 for no higher education. 10 being most prestigious. Use latest, most accepted, authoritative data available when evaluating the institutions. Use 0 for no higher education.",
+        "Type": "Experience",
+        "Name": "quality_of_educational_institutions_for_degree_df",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes:\ninstitute\\_name:\nvalue: rating\neval:"
+    },
+    "certificates_df": {
+        "Weight": "Not Applicable",
+        "Description": "What certificates, awards, honors, patents or industry recognition does person have? Note: Do not provide a date field if no issue date provided. Issue date can be a year or be more detailed.",
+        "Type": "Core",
+        "Name": "certificates_df",
+        "Sub_Type": "None",
+        "value_type": "List",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Attributes: \n-- name: certificate name, for example\n-- type:of(certificate, award, industry\\_recognition,patent, honor, etc)\n-- issuer:\n-- issuer\\_id:\n-- url: \n-- date: date issued"
+    },
+    "has_project_management_certificate": {
+        "Sub_Type": "Project_Management",
+        "is_contribute_rating_overall": "False",
+        "Weight": "10",
+        "value_type": "Boolean",
+        "Type": "Role",
+        "Specification": "",
+        "Name": "has_project_management_certificate"
+    },
+    "residence_timezone": {
+        "Weight": "Not Applicable",
+        "Description": "Timezone as can be determined by residence address, phone area code, or location of latest onsite employer",
+        "Type": "Basic",
+        "Name": "residence_timezone",
+        "Sub_Type": "None",
+        "value_type": "Text",
+        "Specification": "of (Eastern Time (ET),\nCentral Time (CT),\nMountain Time (MT),\nPacific Time (PT),\nAlaska Time (AKT),\nHawaii-Aleutian Time (HAT),\nAtlantic Time (AT) - Puerto Rico and U.S. Virgin Islands, Samoa Time (ST) - American Samoa,\nUNKNOWN\n)",
+        "is_contribute_rating_overall": "False"
+    },
+    "resume_writing_issues_df": {
+        "Weight": "Not Applicable",
+        "Description": "What are spelling and grammar issues in the resume",
+        "Type": "Resume Evaluation",
+        "Name": "resume_writing_issues_df",
+        "value_type": "List",
+        "Sub_Type": "Negatives",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes:\n-- negative:What's the problem/issue?\n-- eval: Explain why this is a significant fault \n-- rating:In a scale of 1-10, how significant of a fault is this?\n-- remediation: How do we fix this?"
+    },
+    "reasons_not_to_hire_df": {
+        "Weight": "Not Applicable",
+        "Description": "What are the top 5 reasons a hiring manager would have for not hiring this person? For example, lack of technical depth; poor written communication skills; overly broad set of skills -- no one can possibly know two dozen programming languages; lack of job experience. Include possible biases that may be obstacles to a hiring. These are not reasons for not hiring based on bias but rather reasons not to hire based on objective evaluations of the inputs.",
+        "Type": "Principal",
+        "Name": "reasons_not_to_hire_df",
+        "value_type": "List",
+        "Sub_Type": "Negatives",
+        "is_contribute_rating_overall": "False",
+        "Specification": "List of dictionaries. Dictionary attributes:\n-- negative: What's the problem/issue?\n-- eval: Explain why this is a significant fault for a hiring manager?\n-- rating:In a scale of 1-10, how significant of a fault is this?\n-- remediation: How can we overcome this fault?"
+    },
+    "rating_quality_of_employers": {
+        "Weight": "10",
+        "Description": "Look at company names.",
+        "Type": "Core",
+        "Name": "rating_quality_of_employers",
+        "Sub_Type": "None",
+        "value_type": "Decimal",
+        "is_contribute_rating_overall": "True",
+        "Specification": "Use a scale 0-10, where 10 for FAANG and similar level companies (highest paying/prestigious companies); lower scores for companies such as AT&T, T-Mobile, Microsoft, lower tier tech companies; 5 for known brands; 3 for lesser-known brands, 1 for small unknown. Aggregate all scores in a total value. More recent is weighted highest."
+    },
+    "has_relational_database_exp": {
+        "Weight": "Not Applicable",
+        "Description": "Has experience with SQL databases",
+        "Type": "Technical",
+        "Name": "has_relational_database_exp",
+        "Sub_Type": "None",
+        "value_type": "Text",
+        "is_contribute_rating_overall": "False"
+    },
+    "social_media_linkedin": {
+        "Sub_Type": "None",
+        "Weight": "Not Applicable",
+        "Description": "LinkedIn profile URL as can be determined from available resources",
+        "Type": "Basic",
+        "is_contribute_rating_overall": "False",
+        "Name": "social_media_linkedin",
+        "value_type": "Text"
+    }
+}

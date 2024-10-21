@@ -1,0 +1,9 @@
+airtable-python-wrapper
+requests
+pyairtable
+pytz
+google-cloud-firestore
+google-cloud-secret-manager
+google-cloud-resource-manager
+glom
+python-dotenv

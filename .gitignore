@@ -1,1 +1,4 @@
-*DONOTSHARE.md
+**/*DONOTSHARE*
+**/.env
+.venv
+**/*.pyc

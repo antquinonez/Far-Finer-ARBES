@@ -1,0 +1,263 @@
+Name,Type,Sub_Type,Specification,embedded_schema,Weight,value_type,Description,is_contribute_rating_overall
+rating_overall,Principal,None,"Using the value from the attribute 'overall\_score', determine a rating.
+
+\[9-10]: exceptional
+[8-9): very high
+[7-8): high
+[6-7): average
+under 6: poor",,Not Applicable,Text,overall rating,False
+skills_df,Technical,Skill,"List of dictionaries. Dictionary attributes:
+-- skill:
+-- type: technical, professional, language, artistic, etc
+-- labels:
+-- score:
+-- source:
+source\_details:","skill: text
+type: text
+labels: list of text
+score: integer
+source: text
+source: text",Not Applicable,List,"Be exhaustive. List all the technical and professional skills. Use the resume/ interview evaluations/ code evaluations. Provide information on the source for the information.
+LABELS AND SCORES
+==================
+Use labels to describe the quality of the information. 
+-- verified: (if the evaluation was performed on the basis of a code base evaluation or was validated in an interview evaluation). score:10
+-- verifiable: if there's a URL or certificate id present and the certificate in itself demonstrates the skill. score: 10 
+-- detailed: (if referenced in the context of a role or project). score: 7
+-- listed: if the skill is part of a list but for which there is no context. score:5
+
+note: Only include an item in source IF we actually have content originating from that source.",False
+degrees_df,Core,None,"List of dictionaries. Attributes
+-- degree: of(AA, BA, AB, MA, MS, PhD, etc)
+-- major:
+-- institution
+-- year\_of\_graduation:",,Not Applicable,List,Higher education degrees,False
+residence_state,Basic,None,,,Not Applicable,Text,"United States state as can be determined by residence address, telephone  area code, or location of latest onsite employer; for example, Washington, California, New York",False
+has_scrum_master_exp,Experience,None,,,8,Boolean,"Has held a scrum master role. To be eligible, person must have held a title with scrum master in the name.",False
+consulting_firm_experience_df,Core,None,"When the candidate resume includes work at a consulting firm, take into account the roles within that consulting firm to capture those company experiences. The term ""consult"" is required in order for it to be considered consulting work. Answer: ""Yes"" or No"" and provide a summary.",,Not Applicable,List,Job experience acquired thru consulting assignments. Only include if work is done for recognized consulting firms.,False
+has_tableau,Technical,Skill,,,3,Boolean,Has Tableau experience? Tableau is the reporting tool.,False
+skill_opportunities_for_improvement_df,Technical,Skill,"List of dictionaries. Dictionary attributes:
+-- area\_for\_improvement:
+-- recommendation:
+-- level\_of\_effort\_required:
+-- benefit\_from\_improvement:
+-- attributes\_affected: {
+attribute\_name:
+init\_rating:
+init\_eval:
+revised\_possible\_rating:
+revised\_possible\_eval:
+}","-- area_for_improvement: Text
+-- recommendation: Text
+-- level_of_effort_required:Integer (1-10)
+-- benefit from improvement: Text
+
+attribute_name: Textinit_rating:Integer
+init_eval:Text
+revised_possible_rating:Integer
+revised_possible_eval:Text",Not Applicable,List,"Given the person's experience and skills, what five areas exist for personal and professional development that would make the person a better practitioner? If their toolset is dated, what newer tools and technologies make sense for their areas of practice?
+
+We're looking for suggestions to enhance obvious gaps in their tool set.
+
+For example:
+-- If the person has only one programming language, they could learn another one.
+--  If the person knows only relational database, they could learn a document database or a graph database.",False
+rating_interview_evaluations,Core,None,"0 absolutely not; 2 needs work; 4 acceptable; 6 experienced; 8  high performer; 10 exceptional;  -1 if no candidate evaluation is available.
+
+If -1, do not include it in the overall\_rating.",,30,Decimal,What's the summary evaluation of the candidate? Takes into account all available interview evaluations.,True
+strategic_impact_df,Core,None,"List of dictionaries. Dictionary attributes:
+-- achievement:
+-- job title:
+-- employer:
+-- client:",,Not Applicable,List,"Work history strategic impacts; for example: transitioned company to first position in Cloud Computing. These are outsized accomplishments, taking credit for very large  wins. Only look at past 7 years. Do not include work that could be taken as routine for the role.",False
+company_count_last_5_years,Core,None,Return -1 if does not have 5 years of work experience.,,Not Applicable,Integer,How many companies has the person worked for in the past 5 years?,False
+social_media_github,Basic,None,,,Not Applicable,Text,Github profile URL as can be determined from available resources,False
+has_fullstack_webdev_exp,Technical,None,,,Not Applicable,Boolean,"Does candidate have web development fullstack experience? Fullstack means that someone has the ability to use not just a web programming language but also has the ability to create APIs, work with a variety of database types, document and relational, for example; has experience with a web development framework, and has experience with a backend framework, such as node.js or Java Spring.",False
+is_resume_right_length,Resume Evaluation,Negatives,Set to False if resume is less than 500 word or is more than 3000 words. Else set to True.,,Not Applicable,Boolean,Evaluate resume for length. We don't want it to be too short or too long. Include resume length in eval field.,False
+rating_quality_of_work_roles,Core,None,Use a scale 0 - 10 to provide an aggregate evaluation the quality of all the candidate's work roles for the past 7 years.,,10,Decimal,"Look at titles and roles. More senior roles, prestige roles have more value.",True
+has_linkedin,Core,None,,,10,Boolean,Shows professionalism. A resume in the modern day must have a LinkedIn link. The presence of a LinkedIn profile in the resume allows us to look up their profile and see that it closely matches the resume.,True
+residence_country,Basic,None,,,Not Applicable,Text,"Country name as can be determined by residence address, phone area code, or location of latest onsite employer; for example, United States, Canada, Mexico",False
+quality_of_educational_institutions_df,Experience,None,"List of dictionaries. Attributes:
+institute\_name:
+value: rating
+eval:",,Not Applicable,List,"Evaluates reputation and latest rank of the higher education schools, only include educational institutions where the applicant received an undergraduate, graduate, or doctorate level degree; do not include institutions where applicant received a certificate or did not graduate. Use a scale 0-10, 0 for no higher education. 10 being most prestigious. Use latest, most accepted, authoritative data available when evaluating the institutions. Use 0 for no higher education.",False
+has_pmo_cert,Technical,Skill,,,9,Boolean,Has PMO Project Management Cert?,False
+dark_materials_reasons_no_eval_df,Dark,Negatives,"List of 5 dictionaries, sorted by most insidious. Dictionary attributes:
+-- negative: Potential bias that could be demonstrated by a hiring manager?
+-- eval: Describe this bias
+-- rating:In a scale of 1-10, how significant of a risk is this for the candidate to be considered?
+-- remediation: How can we overcome this fault?",,Not Applicable,List,"Hiring managers are capable of discrimination. What common discriminatory reasons should we be looking out for? For example; too young, too old, military service, sexual orientation, any attributes that could disqualify someone based on pre conceived notions.
+
+Further examples: 
+Ethnicity-based discrimination -- which could lead to ethnic stereotyping or bias.
+Education elitism -- might lead to positive bias or overshadow other qualifications
+Overqualification bias -- might lead some hiring managers to consider them overqualified for certain positions
+Gender bias -- which could lead to gender-based assumptions or biases in male-dominated tech fields.
+Halo/Horn effect: Allowing one positive or negative trait to influence overall perception of a candidate.
+Name bias: Making assumptions based on a candidate's name, which can intersect with ethnic and gender biases.
+Appearance bias: Judging candidates based on physical appearance, grooming, or style of dress rather than qualifications.",False
+has_cybersecurity_exp,Experience,None,,,Not Applicable,Boolean,"This can be inferred from someone's work experience, if pervasive, job title, and certification.",False
+preferred_name,Basic,None,,,Not Applicable,Text,The person's name as it appears in the resume.,False
+has_github,Technical,None,Identify if a candidate has a github account.,,10,Boolean,Indicates level of seriousness about coding and IT project work in general.,False
+has_cloud_exp,Experience,None,,,3,Boolean,"AWS, GCP, Azure, etc",False
+rating_role_data_and_analytics,Role,Data and Analytics,"range: 1-10
+
+Only use Sub-Type 'Data and Analytics' ratings as source",,Not Applicable,Integer,Role overall rating,False
+resume_opportunities_for_improvement_df,Resume Evaluation,None,"List of dictionaries. Dictionary attributes:
+-- area\_for\_improvement:
+-- recommendation:
+-- level\_of\_effort\_required:
+-- benefit\_from\_improvement:
+-- attributes\_affected: {
+attribute\_name:
+init\_rating:
+init\_eval:
+revised\_possible\_rating:
+revised\_possible\_eval:
+}","-- area_for_improvement: Text
+-- recommendation: Text
+-- level_of_effort_required:Integer (1-10)
+-- benefit from improvement
+
+attribute_name: Textinit_rating:Integer
+init_eval:Text
+revised_possible_rating:Integer
+revised_possible_eval:Text",Not Applicable,List,"Given the person's experience and skills, what five areas of professional improvement exist that would make the person a better candidate for roles where they're qualified. We're not looking for crazy stretch goals; just the application of effort to bridge gaps and get the person on track for career growth. For example: Add achievements,Learn another programming language, get certification in more relevant and desirable technology, Get re-certified for an expired certificate",False
+is_resume_fraudulent,Resume Evaluation,Negatives,,,Not Applicable,Boolean,Determine if person is who they say they are. Are they using a fictional name? Is their LinkedIn profile substantially match their resume? Does the resume substantially duplicate the content of many other resumes?,False
+work_history_performance_metrics_df,Core,None,"List of dictionaries. Dictionary attributes
+-- achievement: Quantified achievement
+-- job title: Job title held associated with achievement
+-- employer:
+-- client:",,Not Applicable,List,"Work history achievements; for example, sales figures, project completion rates, money saved, etc. Only look at past 7 years.",False
+has_data_analyst_exp,Experience,None,,,Not Applicable,Boolean,"Includes reporting, data analysis, business intelligence experience. Experience can be inferred from background that includes a set of multiple data analysts skills: SQL, Tableau, Power BI, Microstrategy, etc.",False
+has_jupyter,Technical,None,,,3,Boolean,"AKA, Jupyter Notebooks",False
+latest_employer,Core,None,"Attributes:
+-- employer
+-- clients
+-- title
+-- job\_description
+-- dates",,Not Applicable,Dictionary,Latest employment role.,False
+rating_quality_of_work_experience,Core,None,Rate the overall quality of all the candidate's work experience using a scale 0-10.,,10,Decimal,"Look at job accomplishments. Impact and high efforts should be highly regarded, as are examples of routine work expected of the role.",True
+has_graph_database_exp,Technical,None,,,Not Applicable,Boolean,,False
+_meta_cant_be_evaluated_df,_meta,Not Applicable,"[{name:field, eval:Why could not be evaluated}]",,Not Applicable,List,Stores a list of dictionaries of fields (Name) that cannot be evaluated,False
+residence_metro_area,Basic,None,,,Not Applicable,Text,"For example: Seattle, New York, Los Angeles. Use telephone area code, address in resume/other data sources",False
+rating_overall_score,Principal,None,"Using ratings and weights for attributes of Type 'Core', calculate an aggregate rating. Scale 0-10
+
+Use decimal rating; for example, 9.8",,Not Applicable,Decimal,overall score,False
+rating_active_learning,Core,None,"0 for no sign of active learning.
+
+1-2 for slight sign of active learning; for example, indications that they are familiar with some newer technology or idea, but not actively pursuing it.
+
+10 for extensive active learning; 10 for actively pursuing a degree beyond Bachelors. Active learning include personal projects, book learning,  publishing, earned certificates and degrees within the past 36 months, articles. If the resume refers to specific projects, presentations, articles, these are signs of active learning. Personal projects that exercise cloud or newer technologies, this is a sign of active learning.",,10,Decimal,"Rates certifications from the past 3 years, involvement in continuing education classes, personal projects, involvement in emerging technologies, etc. While active learning can take place within work, it's primarily meant to identify involvement in work that pushes the boundaries of the job title or role.",True
+has_programming_exp,Experience,None,,,5,Boolean,Can they program?,False
+resume_experience_negatives_df,Resume Evaluation,Negatives,"List of dictionaries. Attributes:
+-- negative: What's the problem/issue?
+-- eval: Explain why this is a significant fault 
+-- rating:In a scale of 1-10, how significant of a fault is this?
+-- remediation: How can we overcome this fault?",,Not Applicable,List,"How is resume insufficient in terms of length, work experience details, achievements, etc",False
+has_python_exp,Technical,Skill,,,3,Boolean,Does person have Python Programming experience?,False
+company_count_last_10_years,Core,None,Return -1 if does not have 10 years of work experience,,Not Applicable,Integer,How many companies has the person worked for in the past 10 years?,False
+pm_months_experience,Role,Project_Management,,,Not Applicable,Integer,"Months doing project management, including technical project management. Include all roles with 'project management' in the title",False
+has_data_management_exp,Experience,None,,,Not Applicable,Boolean,"Involves collecting, organizing, and protecting an organization's data. It covers storage, security, quality control, governance, and analytics. This practice ensures data accuracy, accessibility, and usability, enabling informed decision-making and operational improvements. Someone with reporting or business intelligence experience, without other experience, does not have data management experience.",False
+quality_of_educational_institutions,Core,None,,,10,Decimal,"Evaluates reputation and latest rank of the higher education schools, only include educational institutions where the applicant received an undergraduate, graduate, or doctorate level degree; do not include institutions where applicant received a certificate or did not graduate. Use a scale 0-10, 0 for no higher education. 10 being most prestigious. Use latest, most accepted, authoritative data available when evaluating the institutions. Use 0 for no higher education.",True
+has_non_american_university,Dark,None,,,Not Applicable,Boolean,A non American university may lead to a bias from ignorance of the prestige of these universities,False
+pm_months_of_experience_rating,Role,Project_Management,"less than 1 year, 1
+1-2, 2
+2-3, 3
+etc
+10 or more years, 10",,10,Integer,Specific to roles from roles\_in\_project\_management\_df,False
+has_webdev_exp,Experience,None,,,Not Applicable,Boolean,"Has experience with web development? For example, with Typescript, Javascript, React, Angular, etc. This is someone that we can identify as being abale to develop a website",False
+has_technical_degree,Experience,None,,,Not Applicable,Boolean,"Has a Bachelor or greater degree in a technical field; for example, math, computer science, electrical engineering, etc",False
+is_person_us_based,Basic,None,"Evaluate if possible whether the person is US based. Look at the phone number, indicators of where they were based. Evaluate the combination of direct employers, whether role was remote; language skills, etc. Provide a Yes or no answer.",,Not Applicable,Boolean,Determine if possible if the person is not US based.,False
+rating_resume_communication_quality,Core,None,,,10,Decimal,Evaluate the resume writing quality. Consider spelling and communication quality. The writer may have had to condense and use elision to fit content into a resume format so keep that in mind. Scale of 0-10,True
+has_erp_exp,Experience,None,,,Not Applicable,Boolean,,False
+email_address,Basic,None,,,Not Applicable,Text,Email address as can be determined from available resources,False
+roles_in_project_management_df,Role,Project_Management,"List of dictionaries. Attributes:
+-- role: job title
+-- months: count of months
+-- company:
+-- clients:
+-- date\_range:
+
+if months cannot be determined, then set months to 0; round up months, so 1/2023 - 3/2023 is 3 months",-- clients: Text,Not Applicable,List,Roles in project management.,False
+has_consulting_exp,Experience,None,,,Not Applicable,Boolean,Has this person worked in the role of a consultant?,False
+roles_in_analytics_role_df,Role,Data and Analytics,"Return dictionaries of {role: , months:, date\_range:, company:}
+
+if months cannot be determined, then set months to 0. Rounds months up; for example 1/2023 - 3/2023 is 3 months.",,Not Applicable,List,"Analytics roles includes reporting, data analyst, data engineer, database programmer, role that mentions SQL, etc",False
+skill_diversity,Core,None,Use a scale 0 - 10 to provide an aggregate measure of the candidate's variety and volume of skills,,10,Decimal,"Measure variety and volume of skills across multiple work related and valuable functions. Consider technical, interpersonal, and leadership domains. Also include knowledge of foreign languages.",True
+degree_class,Core,None,"0 for no higher education
+2-5 for certificates, depending on recognized level of difficulty and level from Associate to Professional (or something similar)
+3 for AA
+5 for BA
+7 for Masters, 10 for PhD",,10,Integer,A rating representing the college degree earned by a person,True
+independent_projects_df,Core,None,"List of dictionaries. Attributes:
+-- project\_name
+-- role
+-- project\_type: List of (technical, volunteer, publishing, board membership)
+-- organization: Use 'self' if not done for an organization
+-- dates\_of\_activity",,10,Boolean,"Independent projects may include extra curricular activities that imply applied technical, project management, leadership, consulting, publishing, side careers, side hustles, board memberships, volunteer work.",True
+leadership_experience_df,Core,None,"List of dictionaries. Attributes:
+role:
+-- description\_of\_activities:
+-- organization:
+-- dates\_active:",,Not Applicable,List,"Experience both professional and volunteer that demonstrates leadership capabilities. Provide any average or total or aggregate scores in the value column, and not in the evaluation column",False
+has_nosql,Technical,None,,,Not Applicable,Boolean,Has experience with NoSQL databases,False
+communication_skills_df,Core,None,"Evaluate the candidate's communication skills as demonstrated through formal writing, resume (take into account the structure of the resume and how it compares relative to current professional standards), public presentations, etc.  Score each skill using a scale 1-10 and then provide an aggregate score summing up the candidate's communication skills overall and provide this aggregate score first in the value column
+List of dictionaries. Ordered by highest impact. 
+skill:
+source:",,Not Applicable,List,"Communication skills demonstrated through formal writing, resume (take into account the quality and structure of the resume and how it compares relative to current professional standards), public presentations, etc. Provide an aggregate score.",False
+has_agile_exp,Experience,None,,,Not Applicable,Boolean,Has worked in scrum /agile team or has agile/scrum certification.,False
+rating_role_project_management,Role,Project_Management,"1-10, only use fields with a of Sub-Type 'Project Management'.",,Not Applicable,Integer,Role overall rating,False
+role_experience_df,Basic,None,"List of dictionaries. Attributes:
+-- role\_type: for example, project manager
+-- years\_of\_experience: for example, 1.5",,Not Applicable,List,"By role type, number of years (fractional). Roles are reductive to their main role. Examples: Developer, Project Manager, Product Manager -- and not Sr. Project Manager, L2 Software Engineer, Staff Engineer, Assistant Product Manager.",False
+technical_gaps_df,Core,Negatives,"List of dictionaries (max 5; sort by most serious fault). Attributes: 
+-- gap\_type: for example, certificate, technology, skill
+-- gap: eg, SQL
+-- severity: 1-10 (10 being highest)
+-- eval: eg, mentions data engineer but SQL not mentioned in resume",,Not Applicable,List,"For the role type in which the person has functioned, what technical and skill gaps exist that stand out? For example Candidate identifies as a data engineer but SQL is nowhere found in candidate evaluation material (resume, code, project, articles, etc)",False
+has_sql,Technical,Skill,,,3,Boolean,Has SQL experience based on listing of SQL or any relational database product,False
+social_media_personal,Basic,None,,,Not Applicable,Text,Personal website URL as can be determined from available resources,False
+has_document_database_exp,Technical,None,,,Not Applicable,Boolean,,False
+eligible_roles_df,Core,None,"List of dictionaries. Attributes of:
+-- role: 
+-- rating: (of 1-10) ,
+-- type: of('predefined' if role is from the 'Attribute Description'; else, 'Other')
+-- eval: [extended evaluation text. No more than 100 words]}",,Not Applicable,List,"List of roles person can perform. Of (Scrum Master, Agile Coach, Release Engineer, Product Owner, Project Manager, Technical Project Manager, Program Manager, Change Manager, ERP Specialist,  Business Intelligence Analyst, Data Engineer, Cybersecurity Specialist,  Full Stack Developer
+Instruction to AI: Identify other roles not in the list",False
+has_project_management_exp,Experience,None,,,8,Boolean,"Has held a project management role. To be eligible, person must have held a title with project manager or program manager in the name. DO NOT INCLUDE OTHER ROLES.",False
+quality_of_educational_institutions_for_degree_df,Experience,None,"List of dictionaries. Attributes:
+institute\_name:
+value: rating
+eval:",,Not Applicable,List,"Evaluate the reputation and latest rank of the higher education schools considering only the program in which received their degree (for example Law, Physical Therapy, Dentistry).
+Only include educational institutions where the applicant received an undergraduate, graduate, or doctorate level degree; do not include institutions where applicant received a certificate or did not graduate. Use a scale 0-10, 0 for no higher education. 10 being most prestigious. Use latest, most accepted, authoritative data available when evaluating the institutions. Use 0 for no higher education.",False
+certificates_df,Core,None,"List of dictionaries. Attributes: 
+-- name: certificate name, for example
+-- type:of(certificate, award, industry\_recognition,patent, honor, etc)
+-- issuer:
+-- issuer\_id:
+-- url: 
+-- date: date issued",,Not Applicable,List,"What certificates, awards, honors, patents or industry recognition does person have? Note: Do not provide a date field if no issue date provided. Issue date can be a year or be more detailed.",False
+has_project_management_certificate,Role,Project_Management,,,10,Boolean,,False
+residence_timezone,Basic,None,"of (Eastern Time (ET),
+Central Time (CT),
+Mountain Time (MT),
+Pacific Time (PT),
+Alaska Time (AKT),
+Hawaii-Aleutian Time (HAT),
+Atlantic Time (AT) - Puerto Rico and U.S. Virgin Islands, Samoa Time (ST) - American Samoa,
+UNKNOWN
+)",,Not Applicable,Text,"Timezone as can be determined by residence address, phone area code, or location of latest onsite employer",False
+resume_writing_issues_df,Resume Evaluation,Negatives,"List of dictionaries. Dictionary attributes:
+-- negative:What's the problem/issue?
+-- eval: Explain why this is a significant fault 
+-- rating:In a scale of 1-10, how significant of a fault is this?
+-- remediation: How do we fix this?",,Not Applicable,List,What are spelling and grammar issues in the resume,False
+reasons_not_to_hire_df,Principal,Negatives,"List of dictionaries. Dictionary attributes:
+-- negative: What's the problem/issue?
+-- eval: Explain why this is a significant fault for a hiring manager?
+-- rating:In a scale of 1-10, how significant of a fault is this?
+-- remediation: How can we overcome this fault?",,Not Applicable,List,"What are the top 5 reasons a hiring manager would have for not hiring this person? For example, lack of technical depth; poor written communication skills; overly broad set of skills -- no one can possibly know two dozen programming languages; lack of job experience. Include possible biases that may be obstacles to a hiring. These are not reasons for not hiring based on bias but rather reasons not to hire based on objective evaluations of the inputs.",False
+rating_quality_of_employers,Core,None,"Use a scale 0-10, where 10 for FAANG and similar level companies (highest paying/prestigious companies); lower scores for companies such as AT&T, T-Mobile, Microsoft, lower tier tech companies; 5 for known brands; 3 for lesser-known brands, 1 for small unknown. Aggregate all scores in a total value. More recent is weighted highest.",,10,Decimal,Look at company names.,True
+has_relational_database_exp,Technical,None,,,Not Applicable,Text,Has experience with SQL databases,False
+social_media_linkedin,Basic,None,,,Not Applicable,Text,LinkedIn profile URL as can be determined from available resources,False

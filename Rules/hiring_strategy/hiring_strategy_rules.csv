@@ -1,0 +1,50 @@
+Name,Type,Sub_Type,Specification,value_type,Description,Instructions
+general_setting_skill_score,_general,None,,_Not Applicable,General Instruction,"For skill score. Look for the presence of skills and technology. We score someone higher based on where that skill is present. A technology demonstrated in code analysis is highest (10); extensively documented in a resume, with context and/or description (7); mentioned as part of work experience (5); mentioned in a list or with limited context (3)"
+strategy_most_essential_skills,hiring_strategy,None,see general\_strategy\_spec.Specification,List,"We consider a mix of the most essential skills and consider the candidates achievements and future potential. It matters less that they have the full set of skills and it matters more that they have the background and past achievements to make acquiring those skills well within reach,","- Identify candidates meeting all or almost all mandatory requirements
+- Identify evidence of excellence in the most critical skills
+- For skills that can be gained with lesser effort, emphasize the more difficult to master skills, weigh the more challenging skills over less complex skills  
+- Analyze technical interview feedback and code evaluations:
+    - Example: For a data scientist role, prioritize:
+        1. Exceptional machine learning skills
+        2. Solid programming foundation
+        3. Strong statistics knowledge"
+strategy_appeal_for_opportunity,_general,None,see general\_strategy\_spec.Specification,List,This recruiting strategy focuses on attracting high-potential candidates by highlighting either the role's responsibilities or the appeal of exciting industries and prestigious companies. It targets both candidates who meet the required experience level and those who exceed it but may be enticed by the opportunity to enter a new industry or join a more prominent organization for career advancement.,"Target high-potential candidates by emphasizing the role's opportunities either based on role responsibilities or the appeal of exciting domains, like aerospace or the appeal of higher profile companies. This strategy prioritizes identifying candidates that have already achieved the level of experience required by a role OR candidates that are above the level required by a job description but where a change in industry or a higher profile company may open better opportunities or look better on a resume."
+strategy_skills_experience_based,hiring_strategy,None,see general\_strategy\_spec.Specification,List,"These are the people who check off all or most of the skills and background required by a role. Everything being equal, we take a look at their achievements, active learning, company, role, and educational prestige.","- All things being equal, rank someone with greater accomplishments and signs of active learning, work role, education, pedigree over others."
+general_strategy_spec,_general,None,"evaluation:[ 
+ {
+  -candidate\_name:
+  -score: 1-10 (float)
+  -rank:1..n
+  -reasoning: [reasons for score]
+  -overall\_fit: what's the overall suitability for being considered for this strategy?
+  -areas\_for\_improvement: what would make them better suited for a higher rank for this strategy?
+  -strengths: What skills, experience, background make them strong contenders for this strategy?
+  -skills\_mandatory: [
+-- list of mandatory skills candidate has
+-- skill\_score:1-10 based on 
+  ]
+  -skill\_gaps: [{gap\_name:, level\_of\_effort: effort required to gain this skill; take into account person's existing skills}]
+]
+-order\_by\_rank: [candidate names]
+-summary: [summarize reason for ordering of candidates]",_Not Applicable,"The spec to be used for hiring strategies, unless a strategy specific spec is supplied.",Use Specification when evaluating a hiring strategy unless a specific spec is supplied for a strategy.
+strategy_culture_add,hiring_strategy,None,see general\_strategy\_spec.Specification,List,Some people have exceptional non-traditional backgrounds which may nonetheless add to an organization. We look for skills that are still relevant but unorthodox.,"- Scan resumes for:
+    - Unique experiences or backgrounds different from what's typical and commonly found
+    - Out of the ordinary skills and technologies that may nonetheless relevant to the job domain even if the job description lacks details that make the connection obvious. Consider the skills and tasks that a similar or adjacent roles are responsible for.
+- When assessing code samples or technical assignments:
+    - Look for innovative solutions or unconventional approaches
+    - Identify problem-solving methods
+- Prioritize candidates who can positively challenge existing norms"
+strategy_potential,hiring_strategy,None,see general\_strategy\_spec.Specification,List,"We rank candidates based on their achievements and potential for even greater accomplishments. They should still have the most essential basic skills but we look for people with higher active learning, past accomplishments, and a history of growth, that may be indicators that they will excel in this or many other roles.","- Analyze resumes:
+    - Look for rapid career progression patterns
+    - Identify quick advancements from junior to senior roles
+    - Note increasing responsibilities over short time periods
+- Review interview feedback:
+    - Highlight instances of overcoming challenges or setbacks
+- Assess code samples:
+    - Evaluate ability to adopt new technologies quickly
+    - Look for adaptability in coding style and choices
+- Prioritize candidates demonstrating:
+    - Steep learning curves
+    - High adaptability"
+general_use_dense_rank,_general,None,,_Not Applicable,Dense rank.,"When the difference in score for a strategy is less than .5 points, then use DENSE RANK"
+strategy_most_placeable_candidate,hiring_strategy,None,see general\_strategy\_spec.Specification,List,"Most placable candidate. This is someone that not only fills most of the skills but also excels in employer, education, and role pedigree; has the highest scores for active learning, high qualifications for this role.",
