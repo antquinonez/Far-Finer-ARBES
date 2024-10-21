@@ -68,7 +68,9 @@ rules = rules['table_data']
 fields_to_exclude = ['id', 'Created', 'Created By', 'Last Modified', 'Last Modified By', 'Approved By', 'Notes (not for AI)', 'NTD', 'Use?','Status']
 
 rules = exclude_keys(rules, fields_to_exclude)
+
 rules_json = json.dumps(rules, indent=4)
+rules_json_noindent = json.dumps(rules)
 
 folder_path = '../hiring_strategy'
 rule_name = 'hiring_strategy_rules'
@@ -76,6 +78,10 @@ rule_name = 'hiring_strategy_rules'
 # write result_json to a file
 with open(f'{folder_path}/{rule_name}.json', 'w') as f:
     f.write(rules_json)
+
+# write rules_json_noindent to a file
+with open(f'{folder_path}/{rule_name}_noindent.json', 'w') as f:
+    f.write(rules_json_noindent)    
 
 # write to csv
 priority_fields = ['Name', 'Type', 'Sub_Type', 'Attribute Description', 'Specification', 'embedded_schema', 'Weight', 'value_type']
@@ -113,7 +119,9 @@ rules = rules['table_data']
 fields_to_exclude = ['id', 'Created', 'Created By', 'Last Modified', 'Last Modified By', 'Approved By', 'Notes (not for AI)', 'NTD', 'Use?','Status']
 
 rules = exclude_keys(rules, fields_to_exclude)
+
 rules_json = json.dumps(rules, indent=4)
+rules_json_noindent = json.dumps(rules)
 
 folder_path = '../candidate_evaluation'
 rule_name = 'candidate_evaulation_rules'
@@ -121,6 +129,10 @@ rule_name = 'candidate_evaulation_rules'
 # write result_json to a file
 with open(f'{folder_path}/{rule_name}.json', 'w') as f:
     f.write(rules_json)
+
+# write rules_json_noindent to a file
+with open(f'{folder_path}/{rule_name}_noindent.json', 'w') as f:
+    f.write(rules_json_noindent)    
 
 # write to csv
 priority_fields = ['Name', 'Type', 'Sub_Type', 'Attribute Description', 'Specification', 'embedded_schema', 'Weight', 'value_type']
