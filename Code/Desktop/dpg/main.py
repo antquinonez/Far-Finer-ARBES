@@ -33,7 +33,6 @@ def evaluate_callback():
         ["Problem Solving", "85%", "Strong"],
         ["Team Collaboration", "90%", "Excellent"],
         ["Time Management", "80%", "Good"],
-        ["Adaptability", "88%", "Strong"],
         ["Experience Level", "Senior", "Perfect Match"],
         ["Education", "Masters", "Exceeds"],
         ["Technical Skills", "8/10", "Strong"],
@@ -46,7 +45,6 @@ def evaluate_callback():
         ["Communication", "95%", "Excellent"],
         ["Problem Solving", "85%", "Strong"],
         ["Team Collaboration", "90%", "Excellent"],
-        ["Time Management", "80%", "Good"],
         ["Adaptability", "88%", "Strong"]
     ]
     
@@ -122,7 +120,7 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                 
                 dpg.add_spacer(width=10)
                 
-                # Right side - Results with scrollable table
+                # Right side - Results with fixed header table
                 with dpg.group():
                     dpg.add_text("Evaluation Results")
                     # Summary section
@@ -137,32 +135,33 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                     dpg.add_separator()
                     dpg.add_spacer(height=5)
                     
-                    # Table section with scrollbars
+                    # Table section with fixed header
                     dpg.add_text("Detailed Analysis")
-                    with dpg.child_window(height=450):  # Fixed height for table container
+                    
+                    # Create a child window to contain the table with scrolling
+                    with dpg.child_window(height=450):
+                        # Table with fixed header
                         with dpg.table(tag="results_table", 
-                                     header_row=True,
-                                     borders_innerH=True,
-                                     borders_outerH=True,
-                                     borders_innerV=True,
-                                     borders_outerV=True,
-                                     resizable=True,
-                                     scrollY=True,  # Enable vertical scrolling
-                                     policy=dpg.mvTable_SizingStretchProp,
-                                     height=425):  # Slightly less than container height
+                                    header_row=True,
+                                    borders_innerH=True,
+                                    borders_outerH=True,
+                                    borders_innerV=True,
+                                    borders_outerV=True,
+                                    resizable=True,
+                                    scrollY=True,
+                                    freeze_rows=1,
+                                    height=-1):
                             
-                            dpg.add_table_column(label="Category", init_width_or_weight=0.35)
-                            dpg.add_table_column(label="Score", init_width_or_weight=0.3)
-                            dpg.add_table_column(label="Assessment", init_width_or_weight=0.35)
+                            # Define columns
+                            dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=150)
+                            dpg.add_table_column(label="Assessment", width_fixed=True, init_width_or_weight=200)
                             
                             # Initial empty row
                             with dpg.table_row():
                                 dpg.add_text("Awaiting evaluation...")
                                 dpg.add_text("-")
                                 dpg.add_text("-")
-
-            dpg.add_spacer(height=10)
-            
 
         # Tab 2 - Strategy Evaluations
         with dpg.tab(label="Strategy Evaluations"):
