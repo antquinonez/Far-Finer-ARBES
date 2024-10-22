@@ -13,12 +13,13 @@ def evaluate_callback():
     
     dpg.set_value("results_text", sample_result)
     
-    # Update the table with detailed results
-    # Clear existing rows
-    dpg.delete_item("results_table", children_only=True)
+    # Clear existing rows by deleting all table rows except the header
+    if dpg.does_item_exist("results_table"):
+        children = dpg.get_item_children("results_table")[1]  # [1] gets the row children
+        for child in children:
+            dpg.delete_item(child)
     
     # Add new rows with sample data
-    # In practice, this would be populated with your actual analysis results
     table_data = [
         ["Skills Match", "75%", "Strong"],
         ["Experience Level", "Senior", "Perfect Match"],
@@ -39,7 +40,6 @@ def evaluate_callback():
             dpg.add_text(assessment)
 
 def update_strategy_job_description():
-    # Get the job description from Tab 1 and update Tab 2
     job_text = dpg.get_value("job_description_input")
     dpg.set_value("strategy_job_text", job_text)
 
@@ -47,7 +47,6 @@ def evaluate_strategy():
     strategy_text = dpg.get_value("strategy_input")
     job_text = dpg.get_value("strategy_job_text")
     
-    # Example strategy evaluation result
     strategy_result = "Strategy Evaluation Results:\n\n" + \
                      "✓ Approach Viability: Strong\n" + \
                      "✓ Key Points Addressed: 90%\n" + \
@@ -65,15 +64,12 @@ dpg.create_viewport(title="Multi-Feature Application", width=1400, height=800)
 
 # Create the main window
 with dpg.window(label="Multi-Feature Application", tag="primary_window"):
-    # Create tab bar
     with dpg.tab_bar():
         # Tab 1 - Resume Matcher
         with dpg.tab(label="Resume Matcher"):
-            # Add instructions
             dpg.add_text("Enter resume text and job description below:")
             dpg.add_spacer(height=5)
             
-            # Create layout with three columns
             with dpg.group(horizontal=True):
                 # Left column - Resume
                 with dpg.group():
@@ -86,7 +82,6 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                             height=580
                         )
                 
-                # Add spacing between columns
                 dpg.add_spacer(width=10)
                 
                 # Middle column - Job Description
@@ -101,7 +96,6 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                             callback=update_strategy_job_description
                         )
 
-                # Add spacing between columns
                 dpg.add_spacer(width=10)
                 
                 # Right column - Results
@@ -122,24 +116,24 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                         # Detailed results table
                         dpg.add_text("Detailed Analysis")
                         with dpg.table(tag="results_table", 
-                                     header_row=True, 
+                                     header_row=True,
                                      borders_innerH=True,
                                      borders_outerH=True,
                                      borders_innerV=True,
                                      borders_outerV=True,
-                                     width=480):
+                                     width=480,
+                                     height=400):  # Added fixed height
                             
                             dpg.add_table_column(label="Category", width_fixed=True, width=150)
                             dpg.add_table_column(label="Score", width_fixed=True, width=100)
-                            dpg.add_table_column(label="Assessment")
+                            dpg.add_table_column(label="Assessment", width_fixed=True, width=150)
                             
-                            # Initial empty row (will be populated by evaluate_callback)
+                            # Initial empty row
                             with dpg.table_row():
-                                dpg.add_text("No data")
+                                dpg.add_text("Awaiting evaluation...")
                                 dpg.add_text("-")
                                 dpg.add_text("-")
             
-            # Add spacing before button
             dpg.add_spacer(height=10)
             
             # Add evaluate button centered
