@@ -6,15 +6,37 @@ def evaluate_callback():
     
     # Example evaluation result - replace with your actual evaluation logic
     sample_result = "Evaluation Results:\n\n" + \
-                   "✓ Skills Match: 75%\n" + \
-                   "✓ Experience Level: Strong match\n" + \
-                   "✓ Key Requirements: 8/10 matched\n\n" + \
-                   "Detailed Analysis:\n" + \
+                   "Summary Analysis:\n" + \
                    "- Found relevant experience in Python development\n" + \
                    "- Strong match in database knowledge\n" + \
                    "- Communication skills evident in resume"
     
     dpg.set_value("results_text", sample_result)
+    
+    # Update the table with detailed results
+    # Clear existing rows
+    dpg.delete_item("results_table", children_only=True)
+    
+    # Add new rows with sample data
+    # In practice, this would be populated with your actual analysis results
+    table_data = [
+        ["Skills Match", "75%", "Strong"],
+        ["Experience Level", "Senior", "Perfect Match"],
+        ["Education", "Masters", "Exceeds"],
+        ["Technical Skills", "8/10", "Strong"],
+        ["Soft Skills", "9/10", "Excellent"],
+        ["Leadership", "7/10", "Good"],
+        ["Project Experience", "85%", "Strong"],
+        ["Industry Knowledge", "70%", "Good"],
+        ["Tool Proficiency", "90%", "Excellent"],
+        ["Certifications", "3/4", "Good"]
+    ]
+    
+    for category, score, assessment in table_data:
+        with dpg.table_row(parent="results_table"):
+            dpg.add_text(category)
+            dpg.add_text(score)
+            dpg.add_text(assessment)
 
 def update_strategy_job_description():
     # Get the job description from Tab 1 and update Tab 2
@@ -86,11 +108,36 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                 with dpg.group():
                     dpg.add_text("Evaluation Results")
                     with dpg.child_window(width=500, height=600):
+                        # Text summary at the top
                         dpg.add_text(
                             tag="results_text",
                             default_value="Results will appear here after evaluation...",
                             wrap=380
                         )
+                        
+                        dpg.add_spacer(height=10)
+                        dpg.add_separator()
+                        dpg.add_spacer(height=10)
+                        
+                        # Detailed results table
+                        dpg.add_text("Detailed Analysis")
+                        with dpg.table(tag="results_table", 
+                                     header_row=True, 
+                                     borders_innerH=True,
+                                     borders_outerH=True,
+                                     borders_innerV=True,
+                                     borders_outerV=True,
+                                     width=480):
+                            
+                            dpg.add_table_column(label="Category", width_fixed=True, width=150)
+                            dpg.add_table_column(label="Score", width_fixed=True, width=100)
+                            dpg.add_table_column(label="Assessment")
+                            
+                            # Initial empty row (will be populated by evaluate_callback)
+                            with dpg.table_row():
+                                dpg.add_text("No data")
+                                dpg.add_text("-")
+                                dpg.add_text("-")
             
             # Add spacing before button
             dpg.add_spacer(height=10)
