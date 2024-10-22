@@ -17,6 +17,7 @@ def evaluate_callback():
         for child in children:
             dpg.delete_item(child)
     
+    # Extended sample data to demonstrate scrolling
     table_data = [
         ["Skills Match", "75%", "Strong"],
         ["Experience Level", "Senior", "Perfect Match"],
@@ -27,7 +28,26 @@ def evaluate_callback():
         ["Project Experience", "85%", "Strong"],
         ["Industry Knowledge", "70%", "Good"],
         ["Tool Proficiency", "90%", "Excellent"],
-        ["Certifications", "3/4", "Good"]
+        ["Certifications", "3/4", "Good"],
+        ["Communication", "95%", "Excellent"],
+        ["Problem Solving", "85%", "Strong"],
+        ["Team Collaboration", "90%", "Excellent"],
+        ["Time Management", "80%", "Good"],
+        ["Adaptability", "88%", "Strong"],
+        ["Experience Level", "Senior", "Perfect Match"],
+        ["Education", "Masters", "Exceeds"],
+        ["Technical Skills", "8/10", "Strong"],
+        ["Soft Skills", "9/10", "Excellent"],
+        ["Leadership", "7/10", "Good"],
+        ["Project Experience", "85%", "Strong"],
+        ["Industry Knowledge", "70%", "Good"],
+        ["Tool Proficiency", "90%", "Excellent"],
+        ["Certifications", "3/4", "Good"],
+        ["Communication", "95%", "Excellent"],
+        ["Problem Solving", "85%", "Strong"],
+        ["Team Collaboration", "90%", "Excellent"],
+        ["Time Management", "80%", "Good"],
+        ["Adaptability", "88%", "Strong"]
     ]
     
     for category, score, assessment in table_data:
@@ -96,29 +116,30 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                     dpg.add_button(
                         label="Evaluate Match",
                         callback=evaluate_callback,
-                        width=-1,  # Match parent width
+                        width=-1,
                         height=40
                     )
                 
                 dpg.add_spacer(width=10)
                 
-                # Right side - Results (fills remaining space)
+                # Right side - Results with scrollable table
                 with dpg.group():
                     dpg.add_text("Evaluation Results")
-                    with dpg.child_window(no_scrollbar=True):
-                        # Text summary at the top
+                    # Summary section
+                    with dpg.child_window(height=150):
                         dpg.add_text(
                             tag="results_text",
                             default_value="Results will appear here after evaluation...",
                             wrap=600
                         )
-                        
-                        dpg.add_spacer(height=10)
-                        dpg.add_separator()
-                        dpg.add_spacer(height=10)
-                        
-                        # Detailed results table
-                        dpg.add_text("Detailed Analysis")
+                    
+                    dpg.add_spacer(height=5)
+                    dpg.add_separator()
+                    dpg.add_spacer(height=5)
+                    
+                    # Table section with scrollbars
+                    dpg.add_text("Detailed Analysis")
+                    with dpg.child_window(height=450):  # Fixed height for table container
                         with dpg.table(tag="results_table", 
                                      header_row=True,
                                      borders_innerH=True,
@@ -126,11 +147,13 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                      borders_innerV=True,
                                      borders_outerV=True,
                                      resizable=True,
-                                     policy=dpg.mvTable_SizingStretchProp):
+                                     scrollY=True,  # Enable vertical scrolling
+                                     policy=dpg.mvTable_SizingStretchProp,
+                                     height=425):  # Slightly less than container height
                             
-                            dpg.add_table_column(label="Category")
-                            dpg.add_table_column(label="Score")
-                            dpg.add_table_column(label="Assessment")
+                            dpg.add_table_column(label="Category", init_width_or_weight=0.35)
+                            dpg.add_table_column(label="Score", init_width_or_weight=0.3)
+                            dpg.add_table_column(label="Assessment", init_width_or_weight=0.35)
                             
                             # Initial empty row
                             with dpg.table_row():
@@ -140,15 +163,6 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
 
             dpg.add_spacer(height=10)
             
-            # Add evaluate button centered
-            with dpg.group(horizontal=True):
-                dpg.add_spacer(width=600)
-                dpg.add_button(
-                    label="Evaluate Match",
-                    callback=evaluate_callback,
-                    width=200,
-                    height=40
-                )
 
         # Tab 2 - Strategy Evaluations
         with dpg.tab(label="Strategy Evaluations"):
