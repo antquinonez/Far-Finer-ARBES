@@ -59,19 +59,35 @@ def update_strategy_job_description():
     dpg.set_value("strategy_job_text", job_text)
 
 def evaluate_strategy():
-    strategy_text = dpg.get_value("strategy_input")
-    job_text = dpg.get_value("strategy_job_text")
+    if dpg.does_item_exist("strategy_results_table"):
+        children = dpg.get_item_children("strategy_results_table")[1]
+        for child in children:
+            dpg.delete_item(child)
     
-    strategy_result = "Strategy Evaluation Results:\n\n" + \
-                     "✓ Approach Viability: Strong\n" + \
-                     "✓ Key Points Addressed: 90%\n" + \
-                     "✓ Preparation Level: High\n\n" + \
-                     "Strategic Analysis:\n" + \
-                     "- Clear understanding of role requirements\n" + \
-                     "- Well-structured approach to interviews\n" + \
-                     "- Good alignment with company values"
+    # Sample strategy evaluation data
+    strategy_data = [
+        ["Role Understanding", "95%", "Excellent"],
+        ["Technical Preparation", "85%", "Strong"],
+        ["Company Research", "90%", "Excellent"],
+        ["Experience Alignment", "88%", "Strong"],
+        ["Project Examples", "92%", "Excellent"],
+        ["Skills Demonstration", "87%", "Strong"],
+        ["Cultural Fit", "93%", "Excellent"],
+        ["Question Preparation", "89%", "Strong"],
+        ["Achievement Highlights", "91%", "Excellent"],
+        ["Problem Solving Examples", "86%", "Strong"],
+        ["Leadership Experience", "84%", "Strong"],
+        ["Communication Strategy", "94%", "Excellent"],
+        ["Salary Discussion", "88%", "Strong"],
+        ["Career Goals", "92%", "Excellent"],
+        ["Growth Potential", "90%", "Excellent"]
+    ]
     
-    dpg.set_value("strategy_results", strategy_result)
+    for category, score, assessment in strategy_data:
+        with dpg.table_row(parent="strategy_results_table"):
+            dpg.add_text(category)
+            dpg.add_text(score)
+            dpg.add_text(assessment)
 
 # Initialize DearPyGUI
 dpg.create_context()
@@ -169,22 +185,7 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
             dpg.add_spacer(height=5)
             
             with dpg.group(horizontal=True):
-                # Left column - Strategy Input
-                with dpg.group():
-                    dpg.add_text("Your Strategy")
-                    with dpg.child_window(width=500, height=600):
-                        dpg.add_input_text(
-                            tag="strategy_input",
-                            multiline=True,
-                            width=480,
-                            height=580,
-                            hint="Enter your interview strategy and preparation plans..."
-                        )
-                
-                # Add spacing between columns
-                dpg.add_spacer(width=10)
-                
-                # Middle column - Job Description (Read-only)
+                # Left column - Job Description (Read-only)
                 with dpg.group():
                     dpg.add_text("Job Description (from Tab 1)")
                     with dpg.child_window(width=500, height=600):
@@ -199,15 +200,33 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                 # Add spacing between columns
                 dpg.add_spacer(width=10)
                 
-                # Right column - Strategy Results
+                # Right column - Results Table
                 with dpg.group():
-                    dpg.add_text("Strategy Evaluation")
-                    with dpg.child_window(width=500, height=600):
-                        dpg.add_text(
-                            tag="strategy_results",
-                            default_value="Strategy evaluation results will appear here...",
-                            wrap=380
-                        )
+                    dpg.add_text("Strategy Analysis")
+                    # Create a child window to contain the table with scrolling
+                    with dpg.child_window(width=600, height=600):
+                        # Table with fixed header
+                        with dpg.table(tag="strategy_results_table", 
+                                    header_row=True,
+                                    borders_innerH=True,
+                                    borders_outerH=True,
+                                    borders_innerV=True,
+                                    borders_outerV=True,
+                                    resizable=True,
+                                    scrollY=True,
+                                    freeze_rows=1,
+                                    height=-1):
+                            
+                            # Define columns
+                            dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=150)
+                            dpg.add_table_column(label="Assessment", width_fixed=True, init_width_or_weight=200)
+                            
+                            # Initial empty row
+                            with dpg.table_row():
+                                dpg.add_text("Awaiting evaluation...")
+                                dpg.add_text("-")
+                                dpg.add_text("-")
             
             # Add spacing before button
             dpg.add_spacer(height=10)
@@ -216,7 +235,7 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
             with dpg.group(horizontal=True):
                 dpg.add_spacer(width=600)
                 dpg.add_button(
-                    label="Evaluate Strategy",
+                    label="Evaluate Strategies",
                     callback=evaluate_strategy,
                     width=200,
                     height=40
