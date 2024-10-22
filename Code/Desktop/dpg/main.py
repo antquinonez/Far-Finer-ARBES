@@ -4,7 +4,6 @@ def evaluate_callback():
     resume_text = dpg.get_value("resume_input")
     job_text = dpg.get_value("job_description_input")
     
-    # Example evaluation result - replace with your actual evaluation logic
     sample_result = "Evaluation Results:\n\n" + \
                    "Summary Analysis:\n" + \
                    "- Found relevant experience in Python development\n" + \
@@ -13,13 +12,11 @@ def evaluate_callback():
     
     dpg.set_value("results_text", sample_result)
     
-    # Clear existing rows by deleting all table rows except the header
     if dpg.does_item_exist("results_table"):
-        children = dpg.get_item_children("results_table")[1]  # [1] gets the row children
+        children = dpg.get_item_children("results_table")[1]
         for child in children:
             dpg.delete_item(child)
     
-    # Add new rows with sample data
     table_data = [
         ["Skills Match", "75%", "Strong"],
         ["Experience Level", "Senior", "Perfect Match"],
@@ -67,46 +64,43 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
     with dpg.tab_bar():
         # Tab 1 - Resume Matcher
         with dpg.tab(label="Resume Matcher"):
-            dpg.add_text("Enter resume text and job description below:")
-            dpg.add_spacer(height=5)
-            
             with dpg.group(horizontal=True):
-                # Left column - Resume
-                with dpg.group():
+                # Left side - Stacked inputs (fixed width)
+                with dpg.group(width=400):
+                    # Resume input
                     dpg.add_text("Resume Text")
-                    with dpg.child_window(width=500, height=600):
+                    with dpg.child_window(height=290):
                         dpg.add_input_text(
                             tag="resume_input",
                             multiline=True,
-                            width=480,
-                            height=580
+                            width=-1,  # Fill available width
+                            height=-1  # Fill available height
                         )
-                
-                dpg.add_spacer(width=10)
-                
-                # Middle column - Job Description
-                with dpg.group():
+                    
+                    dpg.add_spacer(height=10)
+                    
+                    # Job Description input
                     dpg.add_text("Job Description")
-                    with dpg.child_window(width=500, height=600):
+                    with dpg.child_window(height=290):
                         dpg.add_input_text(
                             tag="job_description_input",
                             multiline=True,
-                            width=480,
-                            height=580,
+                            width=-1,  # Fill available width
+                            height=-1,  # Fill available height
                             callback=update_strategy_job_description
                         )
-
+                
                 dpg.add_spacer(width=10)
                 
-                # Right column - Results
+                # Right side - Results (fills remaining space)
                 with dpg.group():
                     dpg.add_text("Evaluation Results")
-                    with dpg.child_window(width=500, height=600):
+                    with dpg.child_window(no_scrollbar=True):
                         # Text summary at the top
                         dpg.add_text(
                             tag="results_text",
                             default_value="Results will appear here after evaluation...",
-                            wrap=380
+                            wrap=600
                         )
                         
                         dpg.add_spacer(height=10)
@@ -121,12 +115,13 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                      borders_outerH=True,
                                      borders_innerV=True,
                                      borders_outerV=True,
-                                     width=480,
-                                     height=400):  # Added fixed height
+                                     resizable=True,
+                                     policy=dpg.mvTable_SizingStretchProp):
                             
-                            dpg.add_table_column(label="Category", width_fixed=True, width=150)
-                            dpg.add_table_column(label="Score", width_fixed=True, width=100)
-                            dpg.add_table_column(label="Assessment", width_fixed=True, width=150)
+                            # Columns will resize proportionally
+                            dpg.add_table_column(label="Category")
+                            dpg.add_table_column(label="Score")
+                            dpg.add_table_column(label="Assessment")
                             
                             # Initial empty row
                             with dpg.table_row():
