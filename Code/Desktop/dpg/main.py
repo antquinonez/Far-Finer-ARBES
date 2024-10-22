@@ -214,6 +214,15 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                             height=580,
                             readonly=True
                         )
+                    
+                    # Moved button here, below the job description
+                    dpg.add_spacer(height=10)
+                    dpg.add_button(
+                        label="Evaluate Strategies",
+                        callback=evaluate_strategy,
+                        width=-1,  # Make button width match container
+                        height=40
+                    )
                 
                 dpg.add_spacer(width=10)
                 
@@ -230,7 +239,7 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                     borders_innerV=True,
                                     borders_outerV=True,
                                     resizable=True,
-                                    policy=dpg.mvTable_SizingStretchProp,  # Added to ensure table stretches
+                                    policy=dpg.mvTable_SizingStretchProp,
                                     scrollY=True,
                                     freeze_rows=1,
                                     height=-1):
@@ -245,19 +254,6 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                 dpg.add_text("Awaiting evaluation...")
                                 dpg.add_text("-")
                                 dpg.add_text("-")
-            
-            # Add spacing before button
-            dpg.add_spacer(height=10)
-            
-            # Add evaluate strategy button centered
-            with dpg.group(horizontal=True):
-                dpg.add_spacer(width=600)
-                dpg.add_button(
-                    label="Evaluate Strategies",
-                    callback=evaluate_strategy,
-                    width=200,
-                    height=40
-                )
 
         # Tab 3 - Placeholder for future feature
         with dpg.tab(label="Feature 3"):
