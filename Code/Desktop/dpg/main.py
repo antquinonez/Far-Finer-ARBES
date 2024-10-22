@@ -31,12 +31,12 @@ with dpg.window(label="Resume Job Matcher", tag="primary_window"):
         # Left column - Resume
         with dpg.group():
             dpg.add_text("Resume Text")
-            with dpg.child_window(width=400, height=500):
+            with dpg.child_window(width=500, height=600):
                 dpg.add_input_text(
                     tag="resume_input",
                     multiline=True,
-                    width=380,
-                    height=480
+                    width=480,
+                    height=580
                 )
         
         # Add spacing between columns
@@ -45,12 +45,12 @@ with dpg.window(label="Resume Job Matcher", tag="primary_window"):
         # Middle column - Job Description
         with dpg.group():
             dpg.add_text("Job Description")
-            with dpg.child_window(width=400, height=500):
+            with dpg.child_window(width=500, height=600):
                 dpg.add_input_text(
                     tag="job_description_input",
                     multiline=True,
-                    width=380,
-                    height=480
+                    width=480,
+                    height=580
                 )
 
         # Add spacing between columns
@@ -59,7 +59,7 @@ with dpg.window(label="Resume Job Matcher", tag="primary_window"):
         # Right column - Results
         with dpg.group():
             dpg.add_text("Evaluation Results")
-            with dpg.child_window(width=400, height=500):
+            with dpg.child_window(width=500, height=600):
                 dpg.add_text(
                     tag="results_text",
                     default_value="Results will appear here after evaluation...",
