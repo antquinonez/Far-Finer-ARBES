@@ -1,2 +1,8 @@
-# dearpygui
+dearpygui
 ttkbootstrap
+
+anthropic
+openai
+configparser
+python-dotenv
+pydantic

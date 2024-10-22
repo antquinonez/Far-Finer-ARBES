@@ -1,8 +1,54 @@
+
+import os
+import sys
 import dearpygui.dearpygui as dpg
+
+
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+from lib.AI.FFAnthropicCached import FFAnthropicCached
+from lib.AI.FFAnthropic import FFAnthropic
 
 def evaluate_callback():
     resume_text = dpg.get_value("resume_input")
     job_text = dpg.get_value("job_description_input")
+
+    current_dir = os.getcwd()
+    parent_dir = os.path.dirname(current_dir)
+    grandparent_dir = os.path.dirname(parent_dir)
+    great_grandparent_dir = os.path.dirname(grandparent_dir)
+    sys_ins_can_eval_gen_fpath = os.path.join(great_grandparent_dir, 'Prompts', 'system_instruction_general_candidate_evaluation.md')
+
+    # Then read the file
+    with open(sys_ins_can_eval_gen_fpath, 'r') as file:
+        system_instructions = file.read()
+
+    config ={
+        'system_instructions': system_instructions
+    }
+
+    config_lmodel = {
+        'model': "claude-3-5-sonnet-latest",
+        'system_instructions': system_instructions
+    }
+
+
+    # ai = FFAnthropicCached(config=config)
+    ai= FFAnthropic(config=config_lmodel)
+
+
+    request = f"""Please evaluate this RESUME against the JOB DESCRIPTION.
+    JOB DESCRIPTION
+    ===============
+    {job_text}
+
+    =====================================================================================    
+    The RESUME
+    ===============
+    {resume_text}
+
+    """
+    response = ai.generate_response(request)
+
     
     sample_result = "Evaluation Results:\n\n" + \
                    "Summary Analysis:\n" + \
@@ -10,7 +56,7 @@ def evaluate_callback():
                    "- Strong match in database knowledge\n" + \
                    "- Communication skills evident in resume"
     
-    dpg.set_value("results_text", sample_result)
+    dpg.set_value("results_text", response)
     
     if dpg.does_item_exist("results_table"):
         children = dpg.get_item_children("results_table")[1]
