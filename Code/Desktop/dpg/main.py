@@ -65,7 +65,7 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
         # Tab 1 - Resume Matcher
         with dpg.tab(label="Resume Matcher"):
             with dpg.group(horizontal=True):
-                # Left side - Stacked inputs (fixed width)
+                # Left side - Stacked inputs and button
                 with dpg.group(width=400):
                     # Resume input
                     dpg.add_text("Resume Text")
@@ -73,8 +73,8 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                         dpg.add_input_text(
                             tag="resume_input",
                             multiline=True,
-                            width=-1,  # Fill available width
-                            height=-1  # Fill available height
+                            width=-1,
+                            height=-1
                         )
                     
                     dpg.add_spacer(height=10)
@@ -85,10 +85,20 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                         dpg.add_input_text(
                             tag="job_description_input",
                             multiline=True,
-                            width=-1,  # Fill available width
-                            height=-1,  # Fill available height
+                            width=-1,
+                            height=-1,
                             callback=update_strategy_job_description
                         )
+                    
+                    dpg.add_spacer(height=10)
+                    
+                    # Evaluate button below text boxes
+                    dpg.add_button(
+                        label="Evaluate Match",
+                        callback=evaluate_callback,
+                        width=-1,  # Match parent width
+                        height=40
+                    )
                 
                 dpg.add_spacer(width=10)
                 
@@ -118,7 +128,6 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                      resizable=True,
                                      policy=dpg.mvTable_SizingStretchProp):
                             
-                            # Columns will resize proportionally
                             dpg.add_table_column(label="Category")
                             dpg.add_table_column(label="Score")
                             dpg.add_table_column(label="Assessment")
@@ -128,7 +137,7 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                 dpg.add_text("Awaiting evaluation...")
                                 dpg.add_text("-")
                                 dpg.add_text("-")
-            
+
             dpg.add_spacer(height=10)
             
             # Add evaluate button centered
