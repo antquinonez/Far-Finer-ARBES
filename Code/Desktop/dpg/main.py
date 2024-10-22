@@ -73,6 +73,24 @@ def evaluate_strategy():
         ["Project Examples", "92%", "Excellent"],
         ["Skills Demonstration", "87%", "Strong"],
         ["Cultural Fit", "93%", "Excellent"],
+        ["Soft Skills", "9/10", "Excellent"],
+        ["Leadership", "7/10", "Good"],
+        ["Project Experience", "85%", "Strong"],
+        ["Industry Knowledge", "70%", "Good"],
+        ["Tool Proficiency", "90%", "Excellent"],
+        ["Certifications", "3/4", "Good"],
+        ["Communication", "95%", "Excellent"],
+        ["Problem Solving", "85%", "Strong"],
+        ["Team Collaboration", "90%", "Excellent"],
+        ["Time Management", "80%", "Good"],
+        ["Experience Level", "Senior", "Perfect Match"],
+        ["Education", "Masters", "Exceeds"],
+        ["Technical Skills", "8/10", "Strong"],
+        ["Soft Skills", "9/10", "Excellent"],
+        ["Leadership", "7/10", "Good"],
+        ["Project Experience", "85%", "Strong"],
+        ["Industry Knowledge", "70%", "Good"],
+        ["Tool Proficiency", "90%", "Excellent"],
         ["Question Preparation", "89%", "Strong"],
         ["Achievement Highlights", "91%", "Excellent"],
         ["Problem Solving Examples", "86%", "Strong"],
@@ -186,25 +204,24 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
             
             with dpg.group(horizontal=True):
                 # Left column - Job Description (Read-only)
-                with dpg.group():
+                with dpg.group(width=400):  # Fixed width to match Tab 1
                     dpg.add_text("Job Description (from Tab 1)")
-                    with dpg.child_window(width=500, height=600):
+                    with dpg.child_window(height=600):
                         dpg.add_input_text(
                             tag="strategy_job_text",
                             multiline=True,
-                            width=480,
+                            width=-1,
                             height=580,
                             readonly=True
                         )
                 
-                # Add spacing between columns
                 dpg.add_spacer(width=10)
                 
                 # Right column - Results Table
                 with dpg.group():
                     dpg.add_text("Strategy Analysis")
                     # Create a child window to contain the table with scrolling
-                    with dpg.child_window(width=600, height=600):
+                    with dpg.child_window(height=600):
                         # Table with fixed header
                         with dpg.table(tag="strategy_results_table", 
                                     header_row=True,
@@ -213,14 +230,15 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                     borders_innerV=True,
                                     borders_outerV=True,
                                     resizable=True,
+                                    policy=dpg.mvTable_SizingStretchProp,  # Added to ensure table stretches
                                     scrollY=True,
                                     freeze_rows=1,
                                     height=-1):
                             
-                            # Define columns
-                            dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=200)
-                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=150)
-                            dpg.add_table_column(label="Assessment", width_fixed=True, init_width_or_weight=200)
+                            # Define columns with wider widths
+                            dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=250)
+                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Assessment", width_fixed=True, init_width_or_weight=250)
                             
                             # Initial empty row
                             with dpg.table_row():
