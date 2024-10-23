@@ -239,12 +239,12 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                     height=-1):
                             
                             # Define columns
-                            dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=200)
-                            dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=150)
-                            dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=200)
-                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=200)
-                            dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=150)
-                            dpg.add_table_column(label="Evaluation", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Requirement", width_fixed=False, no_clip=True, init_width_or_weight=125)
+                            dpg.add_table_column(label="Requirement Category", width_fixed=False, no_clip=True, init_width_or_weight=125)
+                            dpg.add_table_column(label="Need Type", width_fixed=True, no_clip=True, init_width_or_weight=65)
+                            dpg.add_table_column(label="Score", width_fixed=True, no_clip=True, init_width_or_weight=40)
+                            dpg.add_table_column(label="Weight", width_fixed=True, no_clip=True, init_width_or_weight=45)
+                            dpg.add_table_column(label="Evaluation", width_fixed=False, no_clip=True, init_width_or_weight=300)
                             
                             # Initial empty row
                             with dpg.table_row():
