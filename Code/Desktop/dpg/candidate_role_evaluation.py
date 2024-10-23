@@ -116,7 +116,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
         with dpg.group(width=700):
             # Resume Text
             dpg.add_text("Resume Text")
-            with dpg.child_window(width=-1, height=300, border=True):
+            with dpg.child_window(width=-1, height=250, border=True):
                 dpg.add_input_text(
                     tag="resume_input",
                     multiline=True,
@@ -128,7 +128,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             
             # Job Description
             dpg.add_text("Job Description")
-            with dpg.child_window(width=-1, height=300, border=True):
+            with dpg.child_window(width=-1, height=250, border=True):
                 dpg.add_input_text(
                     tag="job_description_input",
                     multiline=True,
@@ -152,7 +152,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             
             # Evaluation Results
             dpg.add_text("Evaluation Results")
-            with dpg.child_window(width=-1, height=620, border=True):
+            with dpg.child_window(width=-1, height=500, border=True):
                 dpg.add_text(
                     "Results will appear here after evaluation...",
                     wrap=650,
@@ -163,7 +163,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
     
     # Detailed Analysis table spanning full width
     dpg.add_text("Detailed Analysis")
-    with dpg.child_window(width=-1, height=200, border=True):
+    with dpg.child_window(width=-1, height=300, border=True):
         with dpg.table(
             tag="results_table",
             header_row=True,
@@ -176,12 +176,12 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             width=-1
         ):
             # Define columns
-            dpg.add_table_column(label="Requirement", width_fixed=False, init_width_or_weight=250)
-            dpg.add_table_column(label="Requirement Category", width_fixed=False, init_width_or_weight=300)
-            dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=100)
+            dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=250)
+            dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=250)
+            dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=80)
             dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=80)
-            dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=80)
-            dpg.add_table_column(label="Evaluation", width_fixed=True, init_width_or_weight=550)
+            dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=75)
+            dpg.add_table_column(label="Evaluation", width_fixed=False, init_width_or_weight=550)
             
             # Initial row
             with dpg.table_row():
