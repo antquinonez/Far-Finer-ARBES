@@ -150,13 +150,16 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             
             dpg.add_spacer(height=5)
             
-            # Evaluation Results
+            # Evaluation Results - Changed to input_text
             dpg.add_text("Evaluation Results")
             with dpg.child_window(width=-1, height=500, border=True):
-                dpg.add_text(
-                    "Results will appear here after evaluation...",
-                    wrap=650,
-                    tag="results_text"
+                dpg.add_input_text(
+                    default_value="Results will appear here after evaluation...",
+                    tag="results_text",
+                    multiline=True,
+                    readonly=False,
+                    width=-1,
+                    height=-1
                 )
     
     dpg.add_spacer(height=10)
