@@ -2,11 +2,11 @@ import os
 import sys
 import dearpygui.dearpygui as dpg
 
-
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+
 from lib.AI.FFAnthropicCached import FFAnthropicCached
 from lib.AI.FFAnthropic import FFAnthropic
-from lib.AI.utils.utils import fix_json_from_codeblock
+from lib.AI.utils.utils import fix_json_from_codeblock, wrap_multiline
 
 
 def evaluate_callback():
@@ -50,7 +50,11 @@ def evaluate_callback():
     {resume_text}
 
     """
+
+    # indent and word wrap
     response = ai.generate_response(request)
+    response = wrap_multiline(response)
+
    
     dpg.set_value("results_text", response)
     
