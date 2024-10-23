@@ -21,7 +21,7 @@ JSON_TEMPLATE
     overall_evaluation:
     overall_evaluation_calculation:
     evaluation: [
-        [Requirement, requirement_category, need_type, score, weight,evaluation]
+        [requirement, requirement_category, need_type, score, weight,evaluation]
     ]
 }
 
