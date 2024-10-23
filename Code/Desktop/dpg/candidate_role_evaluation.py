@@ -138,11 +138,11 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
         
         dpg.add_spacer(width=10)
         
-        # Right side - Evaluation Results
+        # Right side - Evaluation ==========================================================
         with dpg.group(width=670):
             # Evaluate button at top
             dpg.add_button(
-                label="Evaluate Match",
+                label="Create Role Evaluation",
                 callback=evaluate_callback,
                 width=120,
                 height=25
