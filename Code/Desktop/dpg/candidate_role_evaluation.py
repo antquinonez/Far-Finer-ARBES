@@ -53,7 +53,7 @@ def evaluate_callback():
 
     # indent and word wrap
     response = ai.generate_response(request)
-    response = wrap_multiline(response)
+    response = wrap_multiline(response, initial_indent="")
 
    
     dpg.set_value("results_text", response)
@@ -143,7 +143,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
         dpg.add_spacer(width=10)
         
         # Right side - Evaluation ==========================================================
-        with dpg.group(width=670):
+        with dpg.group(width=630):
             # Evaluate button at top
             dpg.add_button(
                 label="Create Role Evaluation",
