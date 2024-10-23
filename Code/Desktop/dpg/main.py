@@ -7,34 +7,38 @@ import dearpygui.dearpygui as dpg
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 from lib.AI.FFAnthropicCached import FFAnthropicCached
 from lib.AI.FFAnthropic import FFAnthropic
+from lib.AI.utils.utils import fix_json_from_codeblock
+
 
 def evaluate_callback():
     resume_text = dpg.get_value("resume_input")
     job_text = dpg.get_value("job_description_input")
 
+    # ========================================================================================
+    # PERFORM THE GENERAL EVALUATION 
+    # ========================================================================================
     current_dir = os.getcwd()
     parent_dir = os.path.dirname(current_dir)
     grandparent_dir = os.path.dirname(parent_dir)
     great_grandparent_dir = os.path.dirname(grandparent_dir)
-    sys_ins_can_eval_gen_fpath = os.path.join(great_grandparent_dir, 'Prompts', 'system_instruction_general_candidate_evaluation.md')
+
+    system_instr_gen_candidate_eval_role = 'system_instructions_gen_candidate_evaluation_role.md'
+    system_instr_det_candidate_eval_role = 'system_instructions_det_candidate_evaluation_role.md'
+    
+    sys_ins_gen_can_eval_role_fpath = os.path.join(great_grandparent_dir, 'Prompts', system_instr_gen_candidate_eval_role)
+    sys_ins_det_can_eval_role_fpath = os.path.join(great_grandparent_dir, 'Prompts', system_instr_det_candidate_eval_role)
+    
 
     # Then read the file
-    with open(sys_ins_can_eval_gen_fpath, 'r') as file:
+    with open(sys_ins_gen_can_eval_role_fpath, 'r') as file:
         system_instructions = file.read()
-
-    config ={
-        'system_instructions': system_instructions
-    }
 
     config_lmodel = {
         'model': "claude-3-5-sonnet-latest",
         'system_instructions': system_instructions
     }
 
-
-    # ai = FFAnthropicCached(config=config)
     ai= FFAnthropic(config=config_lmodel)
-
 
     request = f"""Please evaluate this RESUME against the JOB DESCRIPTION.
     JOB DESCRIPTION
@@ -48,57 +52,59 @@ def evaluate_callback():
 
     """
     response = ai.generate_response(request)
-
-    
-    sample_result = "Evaluation Results:\n\n" + \
-                   "Summary Analysis:\n" + \
-                   "- Found relevant experience in Python development\n" + \
-                   "- Strong match in database knowledge\n" + \
-                   "- Communication skills evident in resume"
-    
+   
     dpg.set_value("results_text", response)
     
+    # ========================================================================================
+    # PERFORM THE DETAILED EVALUATION 
+    # ========================================================================================
+    with open(sys_ins_det_can_eval_role_fpath, 'r') as file:
+        system_instructions = file.read()
+
+    config_lmodel = {
+        'model': "claude-3-5-sonnet-latest",
+        'system_instructions': system_instructions
+    }
+
+    ai= FFAnthropic(config=config_lmodel)
+
+    request = f"""Please evaluate this RESUME against the JOB DESCRIPTION.
+    JOB DESCRIPTION
+    ===============
+    {job_text}
+
+    =====================================================================================
+    The RESUME
+    ===============
+    {resume_text}
+    """
+
+    response = ai.generate_response(request) 
+    response = fix_json_from_codeblock(response)
+
+    print(type)
+    print(response)
+
+    empty_data = [
+        ["No data", "--", "--","--","--", "--"]
+    ]
+
+    table_data = response.get('evaluation', empty_data)   
+
     if dpg.does_item_exist("results_table"):
         children = dpg.get_item_children("results_table")[1]
         for child in children:
             dpg.delete_item(child)
-    
-    # Extended sample data to demonstrate scrolling
-    table_data = [
-        ["Skills Match", "75%", "Strong"],
-        ["Experience Level", "Senior", "Perfect Match"],
-        ["Education", "Masters", "Exceeds"],
-        ["Technical Skills", "8/10", "Strong"],
-        ["Soft Skills", "9/10", "Excellent"],
-        ["Leadership", "7/10", "Good"],
-        ["Project Experience", "85%", "Strong"],
-        ["Industry Knowledge", "70%", "Good"],
-        ["Tool Proficiency", "90%", "Excellent"],
-        ["Certifications", "3/4", "Good"],
-        ["Communication", "95%", "Excellent"],
-        ["Problem Solving", "85%", "Strong"],
-        ["Team Collaboration", "90%", "Excellent"],
-        ["Time Management", "80%", "Good"],
-        ["Experience Level", "Senior", "Perfect Match"],
-        ["Education", "Masters", "Exceeds"],
-        ["Technical Skills", "8/10", "Strong"],
-        ["Soft Skills", "9/10", "Excellent"],
-        ["Leadership", "7/10", "Good"],
-        ["Project Experience", "85%", "Strong"],
-        ["Industry Knowledge", "70%", "Good"],
-        ["Tool Proficiency", "90%", "Excellent"],
-        ["Certifications", "3/4", "Good"],
-        ["Communication", "95%", "Excellent"],
-        ["Problem Solving", "85%", "Strong"],
-        ["Team Collaboration", "90%", "Excellent"],
-        ["Adaptability", "88%", "Strong"]
-    ]
-    
-    for category, score, assessment in table_data:
+        
+    for requirement,requirement_category, need_type, score, weight, evaluation in table_data:
         with dpg.table_row(parent="results_table"):
-            dpg.add_text(category)
+            dpg.add_text(requirement)
+            dpg.add_text(requirement_category)
+            dpg.add_text(need_type)
             dpg.add_text(score)
-            dpg.add_text(assessment)
+            dpg.add_text(weight)
+            dpg.add_text(evaluation)
+
 
 def update_strategy_job_description():
     job_text = dpg.get_value("job_description_input")
@@ -233,15 +239,16 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                     height=-1):
                             
                             # Define columns
-                            dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=200)
-                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=150)
-                            dpg.add_table_column(label="Assessment", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=150)
+                            dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=200)
+                            dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=150)
+                            dpg.add_table_column(label="Evaluation", width_fixed=True, init_width_or_weight=200)
                             
                             # Initial empty row
                             with dpg.table_row():
                                 dpg.add_text("Awaiting evaluation...")
-                                dpg.add_text("-")
-                                dpg.add_text("-")
 
         # Tab 2 - Strategy Evaluations
         with dpg.tab(label="Strategy Evaluations"):
