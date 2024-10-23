@@ -102,7 +102,7 @@ def wrap_multiline(
                 wrapped = textwrap.fill(
                     content,
                     width=effective_width,
-                    initial_indent="",
+                    initial_indent=initial_indent,
                     subsequent_indent=subsequent_indent
                 )
                 
