@@ -166,8 +166,8 @@ dpg.create_viewport(title="Multi-Feature Application", width=1400, height=800)
 # Create the main window
 with dpg.window(label="Multi-Feature Application", tag="primary_window"):
     with dpg.tab_bar():
-        # Tab 1 - Resume Matcher
-        with dpg.tab(label="Resume Matcher"):
+        # Tab 1 - Candidate x Role
+        with dpg.tab(label="Candidate x Role"):
             with dpg.group(horizontal=True):
                 # Left side - Stacked inputs and button
                 with dpg.group(width=400):
@@ -239,9 +239,9 @@ with dpg.window(label="Multi-Feature Application", tag="primary_window"):
                                     height=-1):
                             
                             # Define columns
-                            dpg.add_table_column(label="Requirement", width_fixed=False, no_clip=True, init_width_or_weight=125)
-                            dpg.add_table_column(label="Requirement Category", width_fixed=False, no_clip=True, init_width_or_weight=125)
-                            dpg.add_table_column(label="Need Type", width_fixed=True, no_clip=True, init_width_or_weight=65)
+                            dpg.add_table_column(label="Requirement", width_fixed=True, no_clip=True, init_width_or_weight=225)
+                            dpg.add_table_column(label="Requirement Category", width_fixed=True, no_clip=True, init_width_or_weight=175)
+                            dpg.add_table_column(label="Need Type", width_fixed=True, no_clip=True, init_width_or_weight=70)
                             dpg.add_table_column(label="Score", width_fixed=True, no_clip=True, init_width_or_weight=40)
                             dpg.add_table_column(label="Weight", width_fixed=True, no_clip=True, init_width_or_weight=45)
                             dpg.add_table_column(label="Evaluation", width_fixed=False, no_clip=True, init_width_or_weight=300)
