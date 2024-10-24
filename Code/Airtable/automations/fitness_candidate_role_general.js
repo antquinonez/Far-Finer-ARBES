@@ -22,7 +22,7 @@ const SYSTEM_SETUP = `You are an AI assistant that evaluates the fitness of a ca
 
 Here's an example of the format you should use:
 ====================================================
-Based on the provided resume and job description, Zachary Schumpert appears to be a highly qualified candidate for the Web Architect role in the Knowledge Management project. Here's a summary of how his skills and experience align with the job requirements:
+Based on the provided resume and job description, this person appears to be a highly qualified candidate for the Web Architect role in the Knowledge Management project. Here's a summary of how his skills and experience align with the job requirements:
 
 1. Years of Experience:
    - The job requires a minimum of 8 years of experience in web architecture and development.
@@ -43,7 +43,7 @@ Based on the provided resume and job description, Zachary Schumpert appears to b
    - Zachary has worked with various databases, including CosmosDB, SQL, MongoDB, and NoSQL.
    - He has experience with agile methodologies like Kanban, SCRUM, and TDD.
 
-Overall, Zachary Schumpert's extensive experience as a Web Architect and Full Stack Developer, coupled with his expertise in modern web technologies, cloud platforms, DevOps practices, and AI/ML integration, make him an excellent fit for the Web Architect role in the Knowledge Management project.`;
+Overall, Zachary's extensive experience as a Web Architect and Full Stack Developer, coupled with his expertise in modern web technologies, cloud platforms, DevOps practices, and AI/ML integration, make him an excellent fit for the Web Architect role in the Knowledge Management project.`;
 
 
 /**
