@@ -112,6 +112,15 @@ def evaluate_callback():
 dpg.create_context()
 dpg.create_viewport(title="Resume Evaluation", width=1400, height=800)
 
+# Add theme and color configurations
+with dpg.theme() as global_theme:
+    with dpg.theme_component(dpg.mvButton):
+        dpg.add_theme_color(dpg.mvThemeCol_Button, [41, 120, 204])  # Blue color for normal state
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, [54, 141, 227])  # Lighter blue for hover
+        dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, [27, 98, 171])  # Darker blue for click
+        dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)  # Rounded corners
+        dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 6, 6)  # Padding
+
 # Create the main window
 with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, height=800):
     # Main horizontal layout
@@ -144,13 +153,14 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
         
         # Right side - Evaluation ==========================================================
         with dpg.group(width=630):
-            # Evaluate button at top
-            dpg.add_button(
+            # Evaluate button at top with theme binding
+            button = dpg.add_button(
                 label="Create Role Evaluation",
                 callback=evaluate_callback,
                 width=120,
                 height=25
             )
+            dpg.bind_item_theme(button, global_theme)
             
             dpg.add_spacer(height=5)
             
