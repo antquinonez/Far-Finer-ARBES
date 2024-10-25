@@ -18,6 +18,14 @@ JSON_TEMPLATE
 ==============
 {
     overall_score:
+    candidate_name:
+    skills_and_experience: [
+        [
+            skill_experience: Technology or Skill or Certificate or Education
+            category: of(Programming, Industry, Certificate, Role Name, Highest Degree (of: AA, BA, MA, BS, PhD), etc)
+            description: What is the meaning; definition of this skill
+        ]
+    ]
     overall_evaluation:
     overall_evaluation_calculation:
     evaluation: [
@@ -29,13 +37,17 @@ JSON_DATA_TYPE_SCHEMA
 =======================
 overall_score: Decimal; eg, 3.7
 overall_evaluation: Extended text; under 200 words
+skills_and_experience: List of 20 skills, technologies, experience, background from the resume.
+    skill_experience: less than 20 chars
+    category: One or Two word category
+    description: 10 word descritpion of the skill or experience
 
-requirement: Short Text
-requirement_category: Short Text
-need_type: of(optional, mandatory, preferred )
-score: 1-5
-weight: 1-10
-evaluation: Text
+    requirement: Short Text
+    requirement_category: Short Text
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+    evaluation: Text
 
 REQUIRED EVALUATION CATEGORIES
 ====================================

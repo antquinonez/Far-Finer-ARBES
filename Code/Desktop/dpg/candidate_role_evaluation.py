@@ -85,11 +85,12 @@ def evaluate_callback():
     print(type)
     print(response)
 
+    # POPULATE DETAILED ANALYSIS  ==========================================================================
     empty_data = [
         ["No data", "--", "--","--","--", "--"]
     ]
 
-    table_data = response.get('evaluation', empty_data)
+    detailed_analysis_data = response.get('evaluation', empty_data)
 
     # Set gui field values
     dpg.set_value("candidate_name", response['candidate_name'])
@@ -100,7 +101,7 @@ def evaluate_callback():
         for child in children:
             dpg.delete_item(child)
         
-    for requirement, _, need_type, score, weight, evaluation in table_data:
+    for requirement, _, need_type, score, weight, evaluation in detailed_analysis_data:
         with dpg.table_row(parent="results_table"):
             dpg.add_text(requirement)
             # dpg.add_text(requirement_category)
@@ -110,22 +111,9 @@ def evaluate_callback():
             dpg.add_text(evaluation)
 
 
-def populate_skills_table():
     # Sample skills data - you can modify this or load from a file
-    skills_data = [
-        ("Entry", "Technical", "Programming", "0-2 years of practical experience"),
-        ("Junior", "Technical", "Programming", "2-4 years of practical experience"),
-        ("Mid", "Technical", "Programming", "4-6 years of practical experience"),
-        ("Senior", "Technical", "Programming", "6-8 years of practwefwefwefwefwefwe fwe fwe f ef ical experience"),
-        ("Lead", "Technical", "Programming", "8+ years of practical experience"),
-        ("Entry", "Soft Skills", "Communication", "Basic writtfwefwefen and verbal communication"),
-        ("Mid", "Soft Skills", "Communication", "Clear communication with team members"),
-        ("Senior", "Soft Skills", "Communication", "Can communicate complex ideas effectively"),
-        ("Entry", "Domain", "Industry", "Basic understanding of industry concepts"),
-        ("Mid", "Domain", "Industry", "Good working knowledge of industry practices"),
-        ("Senior", "Domain", "Industry", "Deep industry expertise and thought leadership")
-    ]
-    
+    skills_data = response.get('skills_and_experience', empty_data)
+
     # Clear existing rows if any
     if dpg.does_item_exist("skills_table"):
         children = dpg.get_item_children("skills_table")[1]
@@ -133,12 +121,11 @@ def populate_skills_table():
             dpg.delete_item(child)
     
     # Add new rows
-    for skill_exp, _, category, definition in skills_data:
+    for skill_exp, category, description in skills_data:
         with dpg.table_row(parent="skills_table"):
             dpg.add_text(skill_exp)
-            # dpg.add_text(type_)
             dpg.add_text(category)
-            dpg.add_text(definition)
+            dpg.add_text(description)
 
 
 # Initialize DearPyGUI
@@ -280,12 +267,9 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     width=-1
                 ):
                     dpg.add_table_column(label="Skill Experience", width_fixed=True, init_width_or_weight=130)
-                    # dpg.add_table_column(label="Type", width_fixed=True, init_width_or_weight=80)
                     dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=100)
-                    dpg.add_table_column(label="Definition/Explanation", width_fixed=False, init_width_or_weight=150)
+                    dpg.add_table_column(label="Description", width_fixed=False, init_width_or_weight=150)
 
-# Populate the skills table with initial data
-populate_skills_table()
 
 # Setup viewport and show
 dpg.set_primary_window("primary_window", True)
