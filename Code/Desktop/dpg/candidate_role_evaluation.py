@@ -111,7 +111,7 @@ def evaluate_callback():
 
 # Initialize DearPyGUI
 dpg.create_context()
-dpg.create_viewport(title="Resume Evaluation", width=1400, height=800)
+dpg.create_viewport(title="Resume Evaluation", width=1400, height=900)
 
 # Add theme and color configurations
 with dpg.theme() as global_theme:
@@ -123,11 +123,11 @@ with dpg.theme() as global_theme:
         dpg.add_theme_style(dpg.mvStyleVar_FramePadding, 6, 6)  # Padding
 
 # Create the main window
-with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, height=800):
+with dpg.window(label="Resume Evaluation", tag="primary_window", width=900, height=900):
     # Main horizontal layout with fixed widths
     with dpg.group(horizontal=True):
         # Left side - Resume and Job Description (fixed width)
-        with dpg.group(width=650):
+        with dpg.group(width=550):
             dpg.add_text("Resume Text")
             with dpg.child_window(width=-1, height=250, border=True):
                 dpg.add_input_text(
@@ -149,7 +149,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
                 )
         
         # Right side - Evaluation
-        with dpg.group(width=700):
+        with dpg.group(width=800):
             # Button at top
             button = dpg.add_button(
                 label="Create Role Evaluation",
@@ -163,10 +163,10 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             dpg.add_text("Evaluation Results")
 
             # Results area with box around both text and fields
-            with dpg.child_window(width=-1, height=450, border=True):
+            with dpg.child_window(width=-1, height=504, border=True):
                 with dpg.group(horizontal=True):
                     # Results text box
-                    with dpg.child_window(width=450, height=-1, border=True):
+                    with dpg.child_window(width=600, height=-1, border=True):
                         dpg.add_input_text(
                             default_value="Results will appear here after evaluation...",
                             tag="results_text",
@@ -184,7 +184,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
                         dpg.add_text("Candidate Name")
                         dpg.add_input_text(
                             tag="candidate_name", 
-                            width=200,
+                            width=150,
                             height=22
                         )
                         
@@ -195,7 +195,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
                         dpg.add_input_text(
                             tag="evaluation_date",
                             default_value=date.today().strftime("%Y-%m-%d"),
-                            width=200,
+                            width=150,
                             height=22
                         )
                         
@@ -205,7 +205,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
                         dpg.add_text("Overall Score")
                         dpg.add_input_text(
                             tag="overall_score", 
-                            width=200,
+                            width=150,
                             height=22
                         )
     
