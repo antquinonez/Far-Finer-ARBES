@@ -128,7 +128,8 @@ EXAMPLE OUTPUT
 =================
 {
     "overall_score": 3.8,
-    "overall_evaluation": "Antonio Quinonez demonstrates strong experience in data engineering with relevant skills in SQL, Python, and cloud technologies. His experience spans multiple industries and includes work with modern data warehousing solutions like Snowflake. While he meets many core requirements, there are some gaps in specific technologies (Spark, Hadoop, Airflow) called for in the job description. His educational background is non-technical, but his extensive practical experience compensates significantly.",
+    "candidate_name":"Antonio Quinonez",
+    "overall_evaluation": "Antonio demonstrates strong experience in data engineering with relevant skills in SQL, Python, and cloud technologies. His experience spans multiple industries and includes work with modern data warehousing solutions like Snowflake. While he meets many core requirements, there are some gaps in specific technologies (Spark, Hadoop, Airflow) called for in the job description. His educational background is non-technical, but his extensive practical experience compensates significantly.",
     "overall_evaluation_calculation": "((5 * 10) + (4 * 10) + (4 * 10) + (5 * 10) + (2 * 10) + (3 * 7) + (4 * 7) + (2 * 7) + (5 * 7)) / (5 * 10 + 4 * 10)",
     "evaluation": [
         ["Educational Requirements", "mandatory", 2, 10, "Has BA in Comparative Literature rather than Computer Science/Engineering, but demonstrates extensive technical expertise through experience"],

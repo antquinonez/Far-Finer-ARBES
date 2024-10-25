@@ -93,7 +93,11 @@ def evaluate_callback():
         ["No data", "--", "--","--","--", "--"]
     ]
 
-    table_data = response.get('evaluation', empty_data)   
+    table_data = response.get('evaluation', empty_data)
+
+    # Set gui field values
+    dpg.set_value("candidate_name", response['candidate_name'])
+    dpg.set_value("overall_score", response['overall_score'])   
 
     if dpg.does_item_exist("results_table"):
         children = dpg.get_item_children("results_table")[1]
@@ -111,7 +115,7 @@ def evaluate_callback():
 
 # Initialize DearPyGUI
 dpg.create_context()
-dpg.create_viewport(title="Resume Evaluation", width=1400, height=900)
+dpg.create_viewport(title="Resume Evaluation", width=1400, height=950)
 
 # Add theme and color configurations
 with dpg.theme() as global_theme:
@@ -149,7 +153,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=900, heig
                 )
         
         # Right side - Evaluation
-        with dpg.group(width=800):
+        with dpg.group(width=830):  # grouping frame size
             # Button at top
             button = dpg.add_button(
                 label="Create Role Evaluation",
@@ -184,7 +188,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=900, heig
                         dpg.add_text("Candidate Name")
                         dpg.add_input_text(
                             tag="candidate_name", 
-                            width=150,
+                            width=180,
                             height=22
                         )
                         
@@ -195,17 +199,17 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=900, heig
                         dpg.add_input_text(
                             tag="evaluation_date",
                             default_value=date.today().strftime("%Y-%m-%d"),
-                            width=150,
+                            width=180,
                             height=22
                         )
                         
                         dpg.add_spacer(height=5)
                         
                         # Overall Score
-                        dpg.add_text("Overall Score")
+                        dpg.add_text("Overall Score (To Role)")
                         dpg.add_input_text(
                             tag="overall_score", 
-                            width=150,
+                            width=180,
                             height=22
                         )
     
@@ -213,7 +217,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=900, heig
     
     # Detailed Analysis table
     dpg.add_text("Detailed Analysis")
-    with dpg.child_window(width=-1, height=250, border=True):
+    with dpg.child_window(width=1390, height=300, border=True):
         with dpg.table(
             tag="results_table",
             header_row=True,
