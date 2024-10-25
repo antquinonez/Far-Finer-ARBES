@@ -196,8 +196,8 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=250)
             dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=250)
             dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=80)
-            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=80)
-            dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=75)
+            dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=55)
+            dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=55)
             dpg.add_table_column(label="Evaluation", width_fixed=False, init_width_or_weight=550)
             
             # Initial row
