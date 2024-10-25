@@ -1,6 +1,7 @@
 import os
 import sys
 import dearpygui.dearpygui as dpg
+from datetime import date
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 
@@ -123,11 +124,10 @@ with dpg.theme() as global_theme:
 
 # Create the main window
 with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, height=800):
-    # Main horizontal layout
+    # Main horizontal layout with fixed widths
     with dpg.group(horizontal=True):
-        # Left side - Resume and Job Description
-        with dpg.group(width=700):
-            # Resume Text
+        # Left side - Resume and Job Description (fixed width)
+        with dpg.group(width=650):
             dpg.add_text("Resume Text")
             with dpg.child_window(width=-1, height=250, border=True):
                 dpg.add_input_text(
@@ -139,7 +139,6 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             
             dpg.add_spacer(height=10)
             
-            # Job Description
             dpg.add_text("Job Description")
             with dpg.child_window(width=-1, height=250, border=True):
                 dpg.add_input_text(
@@ -149,38 +148,72 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
                     height=-1
                 )
         
-        dpg.add_spacer(width=10)
-        
-        # Right side - Evaluation ==========================================================
-        with dpg.group(width=630):
-            # Evaluate button at top with theme binding
+        # Right side - Evaluation
+        with dpg.group(width=700):
+            # Button at top
             button = dpg.add_button(
                 label="Create Role Evaluation",
                 callback=evaluate_callback,
-                width=120,
+                width=-1,
                 height=25
             )
             dpg.bind_item_theme(button, global_theme)
             
             dpg.add_spacer(height=5)
-            
-            # Evaluation Results - Changed to input_text
             dpg.add_text("Evaluation Results")
-            with dpg.child_window(width=-1, height=500, border=True):
-                dpg.add_input_text(
-                    default_value="Results will appear here after evaluation...",
-                    tag="results_text",
-                    multiline=True,
-                    readonly=False,
-                    width=-1,
-                    height=-1
-                )
+
+            # Results area with box around both text and fields
+            with dpg.child_window(width=-1, height=450, border=True):
+                with dpg.group(horizontal=True):
+                    # Results text box
+                    with dpg.child_window(width=450, height=-1, border=True):
+                        dpg.add_input_text(
+                            default_value="Results will appear here after evaluation...",
+                            tag="results_text",
+                            multiline=True,
+                            readonly=False,
+                            width=-1,
+                            height=-1
+                        )
+                    
+                    dpg.add_spacer(width=5)
+                    
+                    # Info fields group
+                    with dpg.group():
+                        # Candidate Name
+                        dpg.add_text("Candidate Name")
+                        dpg.add_input_text(
+                            tag="candidate_name", 
+                            width=200,
+                            height=22
+                        )
+                        
+                        dpg.add_spacer(height=5)
+                        
+                        # Date
+                        dpg.add_text("Date")
+                        dpg.add_input_text(
+                            tag="evaluation_date",
+                            default_value=date.today().strftime("%Y-%m-%d"),
+                            width=200,
+                            height=22
+                        )
+                        
+                        dpg.add_spacer(height=5)
+                        
+                        # Overall Score
+                        dpg.add_text("Overall Score")
+                        dpg.add_input_text(
+                            tag="overall_score", 
+                            width=200,
+                            height=22
+                        )
     
     dpg.add_spacer(height=10)
     
-    # Detailed Analysis table spanning full width
+    # Detailed Analysis table
     dpg.add_text("Detailed Analysis")
-    with dpg.child_window(width=-1, height=300, border=True):
+    with dpg.child_window(width=-1, height=250, border=True):
         with dpg.table(
             tag="results_table",
             header_row=True,
@@ -192,7 +225,6 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             freeze_rows=1,
             width=-1
         ):
-            # Define columns
             dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=250)
             dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=250)
             dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=80)
@@ -200,7 +232,6 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1400, hei
             dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=55)
             dpg.add_table_column(label="Evaluation", width_fixed=False, init_width_or_weight=550)
             
-            # Initial row
             with dpg.table_row():
                 dpg.add_text("Awaiting evaluation...")
                 dpg.add_text("")
