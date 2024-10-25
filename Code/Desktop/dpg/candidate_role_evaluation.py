@@ -52,7 +52,7 @@ def evaluate_callback():
 
     # indent and word wrap
     response = ai.generate_response(request)
-    response = wrap_multiline(response, width=65, initial_indent="")
+    response = wrap_multiline(response, width=80, initial_indent="")
     dpg.set_value("results_text", response)
     
     # ========================================================================================
@@ -163,7 +163,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
             # Main horizontal layout with fixed widths
             with dpg.group(horizontal=True):
                 # Left side - Resume and Job Description (fixed width)
-                with dpg.group(width=400):
+                with dpg.group(width=490):
                     dpg.add_text("Resume Text")
                     with dpg.child_window(width=-1, height=250, border=True):
                         dpg.add_input_text(
@@ -185,13 +185,12 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                         )
                 
                 # Right side - Evaluation
-                # had been 830 for 80 char wrap
-                # This is the bounding box
-                with dpg.group(width=690):
+                # text box
+                with dpg.group(width=600):
                     button = dpg.add_button(
                         label="Create Role Evaluation",
                         callback=evaluate_callback,
-                        width=-1,
+                        width=500,
                         height=25
                     )
                     dpg.bind_item_theme(button, global_theme)
@@ -199,48 +198,38 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     dpg.add_spacer(height=5)
                     dpg.add_text("Evaluation Results")
 
-                    with dpg.child_window(width=-1, height=504, border=True):
+                    with dpg.child_window(width=500, height=500, border=True):
+                        # Add candidate info group horizontally at the top
                         with dpg.group(horizontal=True):
-                            # had been 600 for 80 char wrap
-                            # This is the textbox for the Evaluation results
-                            with dpg.child_window(width=450, height=-1, border=True):
-                                dpg.add_input_text(
-                                    default_value="Results will appear here after evaluation...",
-                                    tag="results_text",
-                                    multiline=True,
-                                    readonly=False,
-                                    width=-1,
-                                    height=-1
-                                )
-                            
-                            dpg.add_spacer(width=5)
-                            
                             with dpg.group():
                                 dpg.add_text("Candidate Name")
                                 dpg.add_input_text(
                                     tag="candidate_name", 
-                                    width=180,
+                                    width=240,
                                     height=22
                                 )
-                                
-                                dpg.add_spacer(height=5)
-                                
-                                dpg.add_text("Date")
-                                dpg.add_input_text(
-                                    tag="evaluation_date",
-                                    default_value=date.today().strftime("%Y-%m-%d"),
-                                    width=180,
-                                    height=22
-                                )
-                                
-                                dpg.add_spacer(height=5)
-                                
+                            
+                            dpg.add_spacer(width=10)
+                            
+                            with dpg.group():
                                 dpg.add_text("Overall Score (To Role)")
                                 dpg.add_input_text(
                                     tag="overall_score", 
-                                    width=180,
+                                    width=200,
                                     height=22
                                 )
+                        
+                        dpg.add_spacer(height=5)
+                        
+                        # Results text box
+                        dpg.add_input_text(
+                            default_value="Results will appear here after evaluation...",
+                            tag="results_text",
+                            multiline=True,
+                            readonly=False,
+                            width=580,
+                            height=-1
+                        )
             
             dpg.add_spacer(height=10)
             
