@@ -42,12 +42,12 @@ skills_and_experience: List of 20 skills, technologies, experience, background f
     category: One or Two word category
     description: 10 word descritpion of the skill or experience
 
-    requirement: Short Text
-    requirement_category: Short Text
+    requirement: Max 3 words
+    requirement_category: Max 2 words
     need_type: of(optional, mandatory, preferred )
     score: 1-5
     weight: 1-10
-    evaluation: Text
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Estensice is fine since that would describe multiple mention of a skill or experience
 
 REQUIRED EVALUATION CATEGORIES
 ====================================
@@ -77,22 +77,23 @@ Before evaluation:
 5. Check for implied requirements (e.g., "collaborative environment" implies teamwork skills)
 
 
-SCORING NON-TECHNICAL REQUIREMENTS
+SCORING REQUIREMENTS
 ====================================
 Education:
 - Exact match to required degree = 5
 - Related field = 3-4
 - Unrelated field = 1-2
+- No higher education = 0
 
-Soft Skills (evaluate based on):
-- Direct evidence in roles/achievements = 5
+Skills (evaluate based on):
+- Direct evidence in technologies/roles/achievements = 5
 - Implied through responsibilities = 3-4
-- No clear evidence = 0-2
+- No clear evidence = 0
 
 Certifications:
 - Required cert present = 5
 - Related cert present = 3-4
-- No relevant certs = 0-2
+- No relevant certs = 0
 
 TECHNOLOGY CHECKLIST
 ====================================
@@ -149,13 +150,13 @@ EXAMPLE OUTPUT
         ["Python", "Python Programming", "mandatory", 4, 10, "Demonstrated Python experience across multiple projects and roles"],
         ["Snowflake and BigQuery", "Cloud Data Warehousing", "mandatory", 4, 10, "Strong experience with Snowflake and BigQuery"],
         ["Git", "Git Version Control", "mandatory", 5, 10, "Explicitly listed in skills"],
-        [Spark/Hadoop", "Big Data Processing", "mandatory", 2, 10, "No explicit mention of Spark or Hadoop experience"],
-        ["Airflow/Glue", "Data Orchestration", "mandatory", 2, 10, "No explicit mention of Airflow or Glue experience"],
+        [Spark/Hadoop", "Big Data Processing", "mandatory", 0, 10, "No explicit mention of Spark or Hadoop experience"],
+        ["Airflow/Glue", "Data Orchestration", "mandatory", 0, 10, "No explicit mention of Airflow or Glue experience"],
         ["Power BI and Tableau", "Data Visualization", "preferred", 5, 7, "Extensive experience with Power BI and Tableau"],
         ["Cloud Platform Certification", "Certificates", "preferred", 3, 7, "Has consulting certification but no specific cloud platform certifications"],
         ["Communication", "Communication Skills", "mandatory", 4, 10, "Strong evidence through consulting roles and technical project management experience"],
-        ["Databricks", "Databricks Experience", "preferred", 2, 7, "No explicit Databricks experience mentioned"],
-        ["Kafka or Kinesis", "Streaming Technologies", "preferred", 2, 7, "No explicit experience with Kafka or Kinesis"],
+        ["Databricks", "Databricks Experience", "preferred", 0, 7, "No explicit Databricks experience mentioned"],
+        ["Kafka or Kinesis", "Streaming Technologies", "preferred", 0, 7, "No explicit experience with Kafka or Kinesis"],
         ["Tensor Flow or Pytorch", "Machine Learning Frameworks", "preferred", 4, 7, "Experience with AI engineering and ML-powered systems"]
     ]
 }

@@ -10,6 +10,9 @@ from lib.AI.FFAnthropic import FFAnthropic
 from lib.AI.utils.utils import fix_json_from_codeblock, wrap_multiline
 
 
+def sort_by_sec_first_element(lst):
+    return sorted(lst, key=lambda x: (x[1], x[0]))
+
 def evaluate_callback():
     resume_text = dpg.get_value("resume_input")
     job_text = dpg.get_value("job_description_input")
@@ -91,6 +94,7 @@ def evaluate_callback():
     ]
 
     detailed_analysis_data = response.get('evaluation', empty_data)
+    detailed_analysis_data = sort_by_sec_first_element(detailed_analysis_data)
 
     # Set gui field values
     dpg.set_value("candidate_name", response['candidate_name'])
@@ -101,10 +105,10 @@ def evaluate_callback():
         for child in children:
             dpg.delete_item(child)
         
-    for requirement, _, need_type, score, weight, evaluation in detailed_analysis_data:
+    for requirement, requirement_category, need_type, score, weight, evaluation in detailed_analysis_data:
         with dpg.table_row(parent="results_table"):
             dpg.add_text(requirement)
-            # dpg.add_text(requirement_category)
+            dpg.add_text(requirement_category)
             dpg.add_text(need_type)
             dpg.add_text(score)
             dpg.add_text(weight)
@@ -113,6 +117,7 @@ def evaluate_callback():
 
     # Sample skills data - you can modify this or load from a file
     skills_data = response.get('skills_and_experience', empty_data)
+    skills_data = sort_by_sec_first_element(skills_data)
 
     # Clear existing rows if any
     if dpg.does_item_exist("skills_table"):
@@ -185,7 +190,8 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     dpg.add_spacer(height=5)
                     dpg.add_text("Evaluation Results")
 
-                    with dpg.child_window(width=500, height=500, border=True):
+                    # Evaluation Results Frame
+                    with dpg.child_window(width=500, height=503, border=True):
                         # Add candidate info group horizontally at the top
                         with dpg.group(horizontal=True):
                             with dpg.group():
@@ -221,7 +227,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
             dpg.add_spacer(height=10)
             
             # Detailed Analysis table
-            dpg.add_text("Detailed Analysis")
+            dpg.add_text("Detailed Evaluation")
             # had been 1390 for a while
             with dpg.child_window(width=1100, height=300, border=True):
                 with dpg.table(
@@ -235,12 +241,12 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     freeze_rows=1,
                     width=-1
                 ):
-                    dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=250)
-                    # dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=250)
-                    dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=80)
-                    dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=55)
-                    dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=55)
-                    dpg.add_table_column(label="Evaluation", width_fixed=False, init_width_or_weight=550)
+                    dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=220)
+                    dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=130)
+                    dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=75)
+                    dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=48)
+                    dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=49)
+                    dpg.add_table_column(label="Evaluation", width_fixed=False, init_width_or_weight=560)
                     
                     with dpg.table_row():
                         dpg.add_text("Awaiting evaluation...")
@@ -252,8 +258,8 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
         
         # Right side - Skills Table
         with dpg.group():
-            dpg.add_text("Skills Definition")
-            with dpg.child_window(width=-1, height=875, border=True):
+            dpg.add_text("Candidate Background")
+            with dpg.child_window(width=-1, height=881, border=True):
                 with dpg.table(
                     tag="skills_table",
                     header_row=True,
@@ -266,9 +272,9 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     freeze_rows=0,
                     width=-1
                 ):
-                    dpg.add_table_column(label="Skill Experience", width_fixed=True, init_width_or_weight=130)
-                    dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=100)
-                    dpg.add_table_column(label="Description", width_fixed=False, init_width_or_weight=150)
+                    dpg.add_table_column(label="Skill/Experience", width_fixed=True, init_width_or_weight=130)
+                    dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=130)
+                    dpg.add_table_column(label="Description", width_fixed=False, init_width_or_weight=200)
 
 
 # Setup viewport and show
