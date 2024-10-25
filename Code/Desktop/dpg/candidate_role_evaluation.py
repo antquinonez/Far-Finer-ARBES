@@ -52,7 +52,7 @@ def evaluate_callback():
 
     # indent and word wrap
     response = ai.generate_response(request)
-    response = wrap_multiline(response, initial_indent="")
+    response = wrap_multiline(response, width=65, initial_indent="")
     dpg.set_value("results_text", response)
     
     # ========================================================================================
@@ -100,10 +100,10 @@ def evaluate_callback():
         for child in children:
             dpg.delete_item(child)
         
-    for requirement, requirement_category, need_type, score, weight, evaluation in table_data:
+    for requirement, _, need_type, score, weight, evaluation in table_data:
         with dpg.table_row(parent="results_table"):
             dpg.add_text(requirement)
-            dpg.add_text(requirement_category)
+            # dpg.add_text(requirement_category)
             dpg.add_text(need_type)
             dpg.add_text(score)
             dpg.add_text(weight)
@@ -116,9 +116,9 @@ def populate_skills_table():
         ("Entry", "Technical", "Programming", "0-2 years of practical experience"),
         ("Junior", "Technical", "Programming", "2-4 years of practical experience"),
         ("Mid", "Technical", "Programming", "4-6 years of practical experience"),
-        ("Senior", "Technical", "Programming", "6-8 years of practical experience"),
+        ("Senior", "Technical", "Programming", "6-8 years of practwefwefwefwefwefwe fwe fwe f ef ical experience"),
         ("Lead", "Technical", "Programming", "8+ years of practical experience"),
-        ("Entry", "Soft Skills", "Communication", "Basic written and verbal communication"),
+        ("Entry", "Soft Skills", "Communication", "Basic writtfwefwefen and verbal communication"),
         ("Mid", "Soft Skills", "Communication", "Clear communication with team members"),
         ("Senior", "Soft Skills", "Communication", "Can communicate complex ideas effectively"),
         ("Entry", "Domain", "Industry", "Basic understanding of industry concepts"),
@@ -133,10 +133,10 @@ def populate_skills_table():
             dpg.delete_item(child)
     
     # Add new rows
-    for skill_exp, type_, category, definition in skills_data:
+    for skill_exp, _, category, definition in skills_data:
         with dpg.table_row(parent="skills_table"):
             dpg.add_text(skill_exp)
-            dpg.add_text(type_)
+            # dpg.add_text(type_)
             dpg.add_text(category)
             dpg.add_text(definition)
 
@@ -163,7 +163,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
             # Main horizontal layout with fixed widths
             with dpg.group(horizontal=True):
                 # Left side - Resume and Job Description (fixed width)
-                with dpg.group(width=550):
+                with dpg.group(width=400):
                     dpg.add_text("Resume Text")
                     with dpg.child_window(width=-1, height=250, border=True):
                         dpg.add_input_text(
@@ -185,7 +185,9 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                         )
                 
                 # Right side - Evaluation
-                with dpg.group(width=830):
+                # had been 830 for 80 char wrap
+                # This is the bounding box
+                with dpg.group(width=690):
                     button = dpg.add_button(
                         label="Create Role Evaluation",
                         callback=evaluate_callback,
@@ -199,7 +201,9 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
 
                     with dpg.child_window(width=-1, height=504, border=True):
                         with dpg.group(horizontal=True):
-                            with dpg.child_window(width=600, height=-1, border=True):
+                            # had been 600 for 80 char wrap
+                            # This is the textbox for the Evaluation results
+                            with dpg.child_window(width=450, height=-1, border=True):
                                 dpg.add_input_text(
                                     default_value="Results will appear here after evaluation...",
                                     tag="results_text",
@@ -242,7 +246,8 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
             
             # Detailed Analysis table
             dpg.add_text("Detailed Analysis")
-            with dpg.child_window(width=1390, height=300, border=True):
+            # had been 1390 for a while
+            with dpg.child_window(width=1100, height=300, border=True):
                 with dpg.table(
                     tag="results_table",
                     header_row=True,
@@ -255,7 +260,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     width=-1
                 ):
                     dpg.add_table_column(label="Requirement", width_fixed=True, init_width_or_weight=250)
-                    dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=250)
+                    # dpg.add_table_column(label="Requirement Category", width_fixed=True, init_width_or_weight=250)
                     dpg.add_table_column(label="Need Type", width_fixed=True, init_width_or_weight=80)
                     dpg.add_table_column(label="Score", width_fixed=True, init_width_or_weight=55)
                     dpg.add_table_column(label="Weight", width_fixed=True, init_width_or_weight=55)
@@ -272,7 +277,7 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
         # Right side - Skills Table
         with dpg.group():
             dpg.add_text("Skills Definition")
-            with dpg.child_window(width=380, height=865, border=True):
+            with dpg.child_window(width=-1, height=875, border=True):
                 with dpg.table(
                     tag="skills_table",
                     header_row=True,
@@ -281,13 +286,14 @@ with dpg.window(label="Resume Evaluation", tag="primary_window", width=1800, hei
                     borders_innerV=True,
                     borders_outerV=True,
                     scrollY=True,
-                    freeze_rows=1,
+                    # scrollX=True,
+                    freeze_rows=0,
                     width=-1
                 ):
-                    dpg.add_table_column(label="Skill Experience", width_fixed=True, init_width_or_weight=100)
-                    dpg.add_table_column(label="Type", width_fixed=True, init_width_or_weight=80)
-                    dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=80)
-                    dpg.add_table_column(label="Definition/Explanation", width_fixed=False, init_width_or_weight=120)
+                    dpg.add_table_column(label="Skill Experience", width_fixed=True, init_width_or_weight=130)
+                    # dpg.add_table_column(label="Type", width_fixed=True, init_width_or_weight=80)
+                    dpg.add_table_column(label="Category", width_fixed=True, init_width_or_weight=100)
+                    dpg.add_table_column(label="Definition/Explanation", width_fixed=False, init_width_or_weight=150)
 
 # Populate the skills table with initial data
 populate_skills_table()
