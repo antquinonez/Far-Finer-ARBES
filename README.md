@@ -41,6 +41,10 @@ To create a set of AI-powered tools, evaluation methods, and hiring strategy rul
 
 ## Tools
 
+### Candidate Evaluation Tool - Desktop
+This tool runs on your compputer. 
+See the `Code/Desktop/dpg` directory for instructions.
+
 ### Candidate Evaluation Tool - Airtable
 
 This tool, built on the Airtable platform, addresses all Basic Use Cases.
@@ -49,10 +53,11 @@ This tool, built on the Airtable platform, addresses all Basic Use Cases.
 - Airtable account with Teams license (required for Automations)
 
 #### Setup
-For setup instructions, please refer to the `Code/Airtable/README.md` file.
+Unfortunately, an Airtable tool is not downloadable, and there's a lot of manual setup/configuration. These are just the automation scripts. If you have some experience, you can take a look at these scripts and get an idea. 
 
 ## Rules
-This will be published in the form of rulesets in various formats
+Published in the form of rulesets in various formats (JSON, CSV, etc)
+See `Rules`
 
 ### Candidate Evaluation Rules
 A very large set of evaluation rules. Will provide scores, roles a candidate may be qualified for, suggestions for improvements.
