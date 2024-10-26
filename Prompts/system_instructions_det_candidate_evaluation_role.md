@@ -19,11 +19,39 @@ JSON_TEMPLATE
 {
     overall_score:
     candidate_name:
-    skills_and_experience: [
+    skills: [
+        [
+            skill_experience: 
+            category:
+            description: What is the meaning; definition of this skill
+        ]
+    ]
+    technologies: [
+        [
+            skill_experience:
+            category:
+            description: What is the meaning; use of this technology
+        ]
+    ]
+    roles: [
+        [
+            skill_experience:
+            category:
+            description: (Full role name) if abbreviated in the skill_experience field. Companies where candidate has held this role; limit to latest 4 for each role
+        ]
+    ]
+    certificate: [
+        [
+            skill_experience:
+            category:
+            description: What is the meaning; definition of this skill
+        ]
+    ]
+    education: [
         [
             skill_experience: Technology or Skill or Certificate or Education
-            category: of(Programming, Industry, Certificate, Role Name, Highest Degree (of: AA, BA, MA, BS, PhD), etc)
-            description: What is the meaning; definition of this skill
+            category:
+            description: Univeristy (rating based on most recent ranking)
         ]
     ]
     overall_evaluation:
@@ -37,26 +65,43 @@ JSON_DATA_TYPE_SCHEMA
 =======================
 overall_score: Decimal; eg, 3.7
 overall_evaluation: Extended text; under 200 words
-skills_and_experience: List of 20 skills, technologies, experience, background from the resume.
-    skill_experience: less than 20 chars
+skills: Comprehensive list of skills from the resume.
+    skill_experience: name of skill. Use abbreviations.
     category: One or Two word category
-    description: 10 word descritpion of the skill or experience
-
+    description: 10 word descritpion of the skill
+technologies: Comprehensive list of technologies and tools from the resume.
+    skill_experience: name of technology, application, or tool. Use abbreviations when clarity is not impacted
+    category: One or two word category
+    description: 10 word descritpion of the skill    
+roles: Comprehensive list of roles from the resume; for example, Data Engineer, Program Manager, Fullstack Developer
+    skill_experience: role name. Use abbreviations; eg, Sr., PM, Dev
+    category: Role
+    description: Full role name if abbreviated in the skill_experience field. Company where candidate held this title or performed this role (MM/YY - MM/YY)    
+certificates: Comprehensive list of certificates from the resume; for example, AWS Cloud professional, etc
+    skill_experience: certificate name
+    category: Certificate
+    description: 10 word descritpion of the certificate
+education: Comprehensive list of degress from the resume; for example, BA
+    skill_experience: degree; of(BA, BS, MA, MS, PhD, etc)
+    category: Education
+    description: 10 word descritpion of the degree  
+evaluation: candidate resume evaluation against job description
     requirement: Max 3 words
     requirement_category: Max 2 words
     need_type: of(optional, mandatory, preferred )
     score: 1-5
     weight: 1-10
-    evaluation: Max 8 words; use abbreviation; remove words like Strong. Estensice is fine since that would describe multiple mention of a skill or experience
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
 
-REQUIRED EVALUATION CATEGORIES
-====================================
+REQUIRED EVALUATION CATEGORIES IF PRESENT IN JOB DESCRIPTION
+==============================================================
 1. Educational Requirements
 2. Core Technical Skills
 3. Platform & Tool Experience
 4. Soft Skills & Communications
 5. Certifications & Formal Training
 6. Additional Preferred Qualifications
+7. Other
 
 VALIDATION CHECKLIST
 ====================================
@@ -66,9 +111,11 @@ VALIDATION CHECKLIST
 - Have all soft skills been evaluated?
 - Have all certifications and training been evaluated?
 - Have all specific technologies/tools been evaluated individually?
+- Have all skill_experience type attribute values been evaluated?
+- Have all roles been identified, including roles performed in the role of consultant?
 
-REQUIREMENT PARSING
-====================================
+REQUIREMENT PARSING FOR JOB Requirements
+==========================================
 Before evaluation:
 1. Extract and list ALL requirements from job description
 2. Categorize each as mandatory/preferred/optional
@@ -93,10 +140,11 @@ Skills (evaluate based on):
 Certifications:
 - Required cert present = 5
 - Related cert present = 3-4
-- No relevant certs = 0
+- No certs but signs of extensive experience = 1-2 
+- No relevant certs and no sign of extensive experience = 0
 
 TECHNOLOGY CHECKLIST
-====================================
+========================================================
 For each technology mentioned in job description:
 - Score separately (don't group related technologies)
 - Check for explicit mention in resume
@@ -137,7 +185,7 @@ leave a space before and after an operator
 Example: ((4 * 8) + ( 5 * 10))/ (8 + 10)
 
 ================
-EXAMPLE OUTPUT
+EXAMPLE OUTPUT 
 =================
 {
     "overall_score": 3.8,
