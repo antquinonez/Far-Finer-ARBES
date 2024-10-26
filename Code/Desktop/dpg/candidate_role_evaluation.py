@@ -119,11 +119,12 @@ def evaluate_callback():
     empty_data = []
     skills_data = response.get('skills', empty_data)
     technologies_data = response.get('technologies', empty_data)
-    roles_data = response.get('roles', empty_data)
+    job_title_data = response.get('job_title', empty_data)
+    job_function_data = response.get('job_function', empty_data)
     certificates_data = response.get('certificates', empty_data)
     education_data = response.get('education', empty_data)
 
-    all_exp_data = skills_data + technologies_data + roles_data + certificates_data + education_data
+    all_exp_data = skills_data + technologies_data + job_title_data + job_function_data + certificates_data + education_data
     
     all_exp_data = sort_by_sec_first_element(all_exp_data)
     # print(f"skills_data: {all_exp_data}")

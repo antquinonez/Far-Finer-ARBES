@@ -10,6 +10,15 @@ Style: You are to the point, not verbose, and do not prefix your response with a
 ====================================
 DETAILED INSTRUCTIONS
 ====================================
+   "PROCESSING_SEQUENCE": {
+        "1": "Extract raw data from resume",
+        "2": "Parse job requirements",
+        "3": "Generate intermediate validations",
+        "4": "Calculate scores",
+        "5": "Produce final output"
+    }
+
+
 JSON_STRUCTURE
 ==============
 Dictionary of Attributes (Decimal, Integer, String, (List of Lists)
@@ -33,11 +42,18 @@ JSON_TEMPLATE
             description: What is the meaning; use of this technology
         ]
     ]
-    roles: [
+    job_title: [
         [
             skill_experience:
             category:
-            description: (Full role name) if abbreviated in the skill_experience field. Companies where candidate has held this role; limit to latest 4 for each role
+            description: (Full role name) if abbreviated in the skill_experience field. Companies where candidate has held this role.
+        ]
+    ]
+    job_function: [
+        [
+            skill_experience:
+            category:
+            description: Companies where candidate performed this job function
         ]
     ]
     certificate: [
@@ -73,17 +89,21 @@ technologies: Comprehensive list of technologies and tools from the resume.
     skill_experience: name of technology, application, or tool. Use abbreviations when clarity is not impacted
     category: One or two word category
     description: 10 word descritpion of the skill    
-roles: Comprehensive list of roles from the resume; for example, Data Engineer, Program Manager, Fullstack Developer
-    skill_experience: role name. Use abbreviations; eg, Sr., PM, Dev
-    category: Role
-    description: Full role name if abbreviated in the skill_experience field. Company where candidate held this title or performed this role (MM/YY - MM/YY)    
+job_title: Comprehensive list of ALL the job titles from the resume
+    skill_experience: role name. Use abbreviations; eg, PM, Dev
+    category: 'Job Title'
+    description: Full title name if abbreviated in the skill_experience field. Company where candidate held this title or performed this role (MM/YY - MM/YY) 
+job _function: Comprehensive list of ALL the job functions when different from the title, performed while having a different title with the employer
+    skill_experience: job function name. Use abbreviations; eg, PM, Dev
+    category: 'Job Function'
+    description: Full role name if abbreviated in the skill_experience field. Company where candidate held this title or performed this role (MM/YY - MM/YY)        
 certificates: Comprehensive list of certificates from the resume; for example, AWS Cloud professional, etc
     skill_experience: certificate name
     category: Certificate
     description: 10 word descritpion of the certificate
 education: Comprehensive list of degress from the resume; for example, BA
     skill_experience: degree; of(BA, BS, MA, MS, PhD, etc)
-    category: Education
+    category: 'Education'
     description: 10 word descritpion of the degree  
 evaluation: candidate resume evaluation against job description
     requirement: Max 3 words
@@ -112,7 +132,37 @@ VALIDATION CHECKLIST
 - Have all certifications and training been evaluated?
 - Have all specific technologies/tools been evaluated individually?
 - Have all skill_experience type attribute values been evaluated?
-- Have all roles been identified, including roles performed in the role of consultant?
+
+ROLE/SKILL/TECHNOLOGY SPECIFIC VALIDATION REQUIREMENTS
+=======================================
+ "VALIDATION_REQUIREMENTS": {
+        "job_title": {
+            "checks": [
+                "All positions documented",
+                "All date ranges captured",
+                "Concurrent roles identified",
+                "Role transitions noted",
+                "Consulting roles expanded"
+            ]
+        },
+        "skills": {
+            "checks": [
+                "Skill categorization complete",
+                "Usage context documented",
+                "Frequency counted",
+                "Proficiency level assessed"
+            ]
+        },
+        "technologies": {
+            "checks": [
+                "All tools listed",
+                "Usage context clear",
+                "Versions noted",
+                "Proficiency assessed"
+            ]
+        }
+    }
+
 
 REQUIREMENT PARSING FOR JOB Requirements
 ==========================================
@@ -148,8 +198,6 @@ TECHNOLOGY CHECKLIST
 For each technology mentioned in job description:
 - Score separately (don't group related technologies)
 - Check for explicit mention in resume
-- Check for version/specific implementation experience
-- Note recency of experience
 
 =======================================================================
 ON SCORING
