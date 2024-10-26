@@ -85,8 +85,8 @@ def evaluate_callback():
     response = ai.generate_response(request) 
     response = fix_json_from_codeblock(response)
 
-    print(type)
-    print(response)
+    # print(type)
+    # print(response)
 
     # POPULATE DETAILED ANALYSIS  ==========================================================================
     empty_data = [
@@ -115,9 +115,18 @@ def evaluate_callback():
             dpg.add_text(evaluation)
 
 
-    # Sample skills data - you can modify this or load from a file
-    skills_data = response.get('skills_and_experience', empty_data)
-    skills_data = sort_by_sec_first_element(skills_data)
+    # SKILLS DATA =============================================================================
+    empty_data = []
+    skills_data = response.get('skills', empty_data)
+    technologies_data = response.get('technologies', empty_data)
+    roles_data = response.get('roles', empty_data)
+    certificates_data = response.get('certificates', empty_data)
+    education_data = response.get('education', empty_data)
+
+    all_exp_data = skills_data + technologies_data + roles_data + certificates_data + education_data
+    
+    all_exp_data = sort_by_sec_first_element(all_exp_data)
+    # print(f"skills_data: {all_exp_data}")
 
     # Clear existing rows if any
     if dpg.does_item_exist("skills_table"):
@@ -126,7 +135,7 @@ def evaluate_callback():
             dpg.delete_item(child)
     
     # Add new rows
-    for skill_exp, category, description in skills_data:
+    for skill_exp, category, description in all_exp_data:
         with dpg.table_row(parent="skills_table"):
             dpg.add_text(skill_exp)
             dpg.add_text(category)
