@@ -42,12 +42,13 @@ To create a set of AI-powered tools, evaluation methods, and hiring strategy rul
 ## Tools
 
 ### Candidate Evaluation Tool - Desktop
-This tool runs on your compputer. 
+This Python GUI tool runs on your compputer. Addresses all Basic Use Cases.
 See the `Code/Desktop/dpg` directory for instructions.
 
 ### Candidate Evaluation Tool - Airtable
 
 This tool, built on the Airtable platform, addresses all Basic Use Cases.
+See the `Code/Airtable/automations` directory
 
 #### Prerequisites
 - Airtable account with Teams license (required for Automations)
