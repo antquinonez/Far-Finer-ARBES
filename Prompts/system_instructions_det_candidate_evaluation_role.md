@@ -87,7 +87,28 @@ JSON_TEMPLATE
     evaluation_management: [
         [requirement, requirement_category, need_type, score, weight,evaluation]
     ]
+    evaluation_computer_science [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
     evaluation_credentials: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_languages: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_tasks: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]    
+    evaluation_tools: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_tool_cats: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_architecture: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_practices: [
         [requirement, requirement_category, need_type, score, weight,evaluation]
     ]
     evaluation_other: [
@@ -130,49 +151,18 @@ evaluation_main: candidate resume evaluation against job description
     score: 1-5
     weight: 1-10
     evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
-evaluation_technical: candidate resume evaluation against job description
-    requirement: Max 3 words
-    requirement_category: Max 2 words
-    need_type: of(optional, mandatory, preferred )
-    score: 1-5
-    weight: 1-10
-    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
-optional: evaluation_database: candidate resume evaluation against job description
-    requirement: Max 3 words
-    requirement_category: Max 2 words
-    need_type: of(optional, mandatory, preferred )
-    score: 1-5
-    weight: 1-10
-    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
-optional: evaluation_programming: candidate resume evaluation against job description
-    requirement: Max 3 words
-    requirement_category: Max 2 words
-    need_type: of(optional, mandatory, preferred )
-    score: 1-5
-    weight: 1-10
-    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
-optional: evaluation_management: candidate resume evaluation against job description
-    requirement: Max 3 words
-    requirement_category: Max 2 words
-    need_type: of(optional, mandatory, preferred )
-    score: 1-5
-    weight: 1-10
-optional: evaluation_credentials: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience 
-    evaluation_management: candidate resume evaluation against job description
-    requirement: Max 3 words
-    requirement_category: Max 2 words
-    need_type: of(optional, mandatory, preferred )
-    score: 1-5
-    weight: 1-10
-    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or  experience               
-optional: evaluation_other: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience 
-    evaluation_management: candidate resume evaluation against job description
-    requirement: Max 3 words
-    requirement_category: Max 2 words
-    need_type: of(optional, mandatory, preferred )
-    score: 1-5
-    weight: 1-10
-    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or  experience               
+evaluation_computer_science: computer science concepts; eg, data structures, algorithms, etc[..]
+evaluation_credentials: certificates, clearances [..]
+evaluation_database: database and datawarehouse products; MySQL, BigQuery, etc[..]
+evaluation_languages: world languages[..]
+evaluation_management: leadership, management, and organizational skills[..]
+evaluation_practices: practices, such as Scrum, Agile, Documentation[..]
+evaluation_programming: programming languages; Perl, Pythonm, C++, etc[..]
+evaluation_tasks: tasks required as part of the job[..]
+evaluation_tools: tools, such as Jira, Git, Visual Studio Code, etc[..]
+evaluation_tool_cats: tool categories, where tools not mentioned by name[..]
+evaluation_domains: Industrues, such as Finance, Healthcare, etc[..]
+evaluation_other: other requirements[..]
 
 
 REQUIRED EVALUATION_ CATEGORIES IF PRESENT IN JOB DESCRIPTION
