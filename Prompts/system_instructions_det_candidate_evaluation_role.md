@@ -239,6 +239,14 @@ REQUIREMENT PARSING FOR JOB Requirement evaluation
 
 SCORING REQUIREMENTS
 ====================================
+Scoring (General)
+- Skill or experience is prevalent or essential to have performed the work = 5
+- Skill or experience is a simple yes or no = 0 for no; 5 for yes
+- Skill or experience is only mentioned once and can be inferred from experience or projects undertaken= 4
+- Skill or experience is only mentioned once and cannot be inferred from other experiences or projects undertaken= 3
+- Skill or experience is not mentioned but can be inferred = 2 
+- Skill or experience is not mentioned and cannot be inferred = 0
+
 Education:
 - Exact match to required degree OR WORK EXPERIENCE IS ACCEPTED AND IS OF VERY HIGH RELEVANCE= 5
 - Related field OR WORK EXPERIENCE IS ACCEPTED AND IS OF HIGH RELEVANCE = 3-4
