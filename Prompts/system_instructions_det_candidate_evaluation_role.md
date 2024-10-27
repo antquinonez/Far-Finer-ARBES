@@ -11,7 +11,7 @@ Style: You are to the point, not verbose, and do not prefix your response with a
 DETAILED INSTRUCTIONS
 ====================================
    "PROCESSING_SEQUENCE": {
-        "1": "Extract raw data from resume",
+        "1": "Extract data from resume",
         "2": "Parse job requirements",
         "3": "Generate intermediate validations",
         "4": "Calculate scores",
@@ -72,7 +72,25 @@ JSON_TEMPLATE
     ]
     overall_evaluation:
     overall_evaluation_calculation:
-    evaluation: [
+    evaluation_main: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_technical: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_database: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_programming: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_management: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_credentials: [
+        [requirement, requirement_category, need_type, score, weight,evaluation]
+    ]
+    evaluation_other: [
         [requirement, requirement_category, need_type, score, weight,evaluation]
     ]
 }
@@ -105,15 +123,59 @@ education: Comprehensive list of degress from the resume; for example, BA
     skill_experience: degree; of(BA, BS, MA, MS, PhD, etc)
     category: 'Education'
     description: 10 word descritpion of the degree  
-evaluation: candidate resume evaluation against job description
+evaluation_main: candidate resume evaluation against job description
     requirement: Max 3 words
     requirement_category: Max 2 words
     need_type: of(optional, mandatory, preferred )
     score: 1-5
     weight: 1-10
     evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
+evaluation_technical: candidate resume evaluation against job description
+    requirement: Max 3 words
+    requirement_category: Max 2 words
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
+optional: evaluation_database: candidate resume evaluation against job description
+    requirement: Max 3 words
+    requirement_category: Max 2 words
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
+optional: evaluation_programming: candidate resume evaluation against job description
+    requirement: Max 3 words
+    requirement_category: Max 2 words
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience
+optional: evaluation_management: candidate resume evaluation against job description
+    requirement: Max 3 words
+    requirement_category: Max 2 words
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+optional: evaluation_credentials: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience 
+    evaluation_management: candidate resume evaluation against job description
+    requirement: Max 3 words
+    requirement_category: Max 2 words
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or  experience               
+optional: evaluation_other: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or experience 
+    evaluation_management: candidate resume evaluation against job description
+    requirement: Max 3 words
+    requirement_category: Max 2 words
+    need_type: of(optional, mandatory, preferred )
+    score: 1-5
+    weight: 1-10
+    evaluation: Max 8 words; use abbreviation; remove words like Strong. Extensive is fine since that would describe multiple mention of a skill or  experience               
 
-REQUIRED EVALUATION CATEGORIES IF PRESENT IN JOB DESCRIPTION
+
+REQUIRED EVALUATION_ CATEGORIES IF PRESENT IN JOB DESCRIPTION
 ==============================================================
 1. Educational Requirements
 2. Core Technical Skills
@@ -121,7 +183,6 @@ REQUIRED EVALUATION CATEGORIES IF PRESENT IN JOB DESCRIPTION
 4. Soft Skills & Communications
 5. Certifications & Formal Training
 6. Additional Preferred Qualifications
-7. Other
 
 VALIDATION CHECKLIST
 ====================================
@@ -134,7 +195,7 @@ VALIDATION CHECKLIST
 - Have all skill_experience type attribute values been evaluated?
 
 ROLE/SKILL/TECHNOLOGY SPECIFIC VALIDATION REQUIREMENTS
-=======================================
+===================================================================
  "VALIDATION_REQUIREMENTS": {
         "job_title": {
             "checks": [
@@ -164,27 +225,37 @@ ROLE/SKILL/TECHNOLOGY SPECIFIC VALIDATION REQUIREMENTS
     }
 
 
-REQUIREMENT PARSING FOR JOB Requirements
-==========================================
-Before evaluation:
-1. Extract and list ALL requirements from job description
-2. Categorize each as mandatory/preferred/optional
-3. Group into categories (education, technical, soft skills, etc.)
-4. Create separate evaluation entry for EACH specific technology/tool
-5. Check for implied requirements (e.g., "collaborative environment" implies teamwork skills)
-
+REQUIREMENT PARSING FOR JOB Requirement evaluation
+=======================================================
+1. Extract and list ALL requirements from job description.
+1a. Each sentence in the Job Requiremenmts section of the job description is a separate requirement and should be listed separately.
+1b. Count the number of job requirements. YOu will be evaluated on this.
+2. Do not generalize requiremenrs. Keep each requirement separate. Be complete.
+3. Categorize each as mandatory/preferred/optional
+4. Label requirements using categories (Education, Technical, Soft Skills, etc.)
+5. Create separate evaluation entry for EACH specific technology/tool/certification
+6. Check for implied requirements (e.g., "collaborative environment" implies teamwork skills)
+7. After evaluation, make sure the count of requirements evaluated match the count of requirements counted before the evaluation began.
 
 SCORING REQUIREMENTS
 ====================================
-Education:
-- Exact match to required degree = 5
-- Related field = 3-4
-- Unrelated field = 1-2
-- No higher education = 0
+Scoring (General)
+- Skill or experience is prevalent or essential to have performed the work = 5
+- Skill or experience is a simple yes or no = 0 for no; 5 for yes
+- Skill or experience is only mentioned once and can be inferred from experience or projects undertaken= 4
+- Skill or experience is only mentioned once and cannot be inferred from other experiences or projects undertaken= 3
+- Skill or experience is not mentioned but can be inferred = 2 
+- Skill or experience is not mentioned and cannot be inferred = 0
 
-Skills (evaluate based on):
-- Direct evidence in technologies/roles/achievements = 5
-- Implied through responsibilities = 3-4
+Education:
+- Exact match to required degree OR WORK EXPERIENCE IS ACCEPTED AND IS OF VERY HIGH RELEVANCE= 5
+- Related field OR WORK EXPERIENCE IS ACCEPTED AND IS OF HIGH RELEVANCE = 3-4
+- Unrelated field OR WORK EXPERIENCE IS ACCEPTED AND IS OF OF MODERATE RELEVANCE = 1-2
+- No higher education OR NO RELEVANT WORK EXPERIENCE = 0
+
+Skills and Experience (evaluate based on):
+- Direct evidence in technologies/roles/achievements = 5 (Extensively mentioned)
+- Implied through responsibilities = 3-4 (Mentioned)
 - No clear evidence = 0
 
 Certifications:
@@ -240,7 +311,7 @@ EXAMPLE OUTPUT
     "candidate_name":"Antonio Quinonez",
     "overall_evaluation": "Antonio demonstrates strong experience in data engineering with relevant skills in SQL, Python, and cloud technologies. His experience spans multiple industries and includes work with modern data warehousing solutions like Snowflake. While he meets many core requirements, there are some gaps in specific technologies (Spark, Hadoop, Airflow) called for in the job description. His educational background is non-technical, but his extensive practical experience compensates significantly.",
     "overall_evaluation_calculation": "((5 * 10) + (4 * 10) + (4 * 10) + (5 * 10) + (2 * 10) + (3 * 7) + (4 * 7) + (2 * 7) + (5 * 7)) / (5 * 10 + 4 * 10)",
-    "evaluation": [
+    "evaluation_main": [
         ["Educational Requirements", "mandatory", 2, 10, "Has BA in Comparative Literature rather than Computer Science/Engineering, but demonstrates extensive technical expertise through experience"],
         ["SQL", "SQL Proficiency", "mandatory", 5, 10, "Strong evidence of SQL expertise including CTEs, Windowing Functions, and multiple database platforms"],
         ["Python", "Python Programming", "mandatory", 4, 10, "Demonstrated Python experience across multiple projects and roles"],
@@ -254,7 +325,7 @@ EXAMPLE OUTPUT
         ["Databricks", "Databricks Experience", "preferred", 0, 7, "No explicit Databricks experience mentioned"],
         ["Kafka or Kinesis", "Streaming Technologies", "preferred", 0, 7, "No explicit experience with Kafka or Kinesis"],
         ["Tensor Flow or Pytorch", "Machine Learning Frameworks", "preferred", 4, 7, "Experience with AI engineering and ML-powered systems"]
-    ]
+    ]... for the other evaluation_types
 }
 
 >>> ONLY respond with JSON. <<<<

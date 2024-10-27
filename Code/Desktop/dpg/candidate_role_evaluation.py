@@ -86,15 +86,24 @@ def evaluate_callback():
     response = fix_json_from_codeblock(response)
 
     # print(type)
-    # print(response)
+    print(response)
 
     # POPULATE DETAILED ANALYSIS  ==========================================================================
-    empty_data = [
-        ["No data", "--", "--","--","--", "--"]
-    ]
+    empty_data = [ ]
 
-    detailed_analysis_data = response.get('evaluation', empty_data)
+    evaluation_main_data = response.get('evaluation_main', empty_data)
+    evaluation_technical_data = response.get('evaluation_technical', empty_data)
+    evaluation_database_data = response.get('evaluation_database', empty_data)
+    evaluation_programming_data = response.get('evaluation_programming', empty_data)
+    evaluation_management_data = response.get('evaluation_management', empty_data)
+    evaluation_credentials_data = response.get('evaluation_credentials', empty_data)
+    evaluation_other_data = response.get('evaluation_other', empty_data)
+
+    detailed_analysis_data = evaluation_main_data + evaluation_technical_data + evaluation_database_data + evaluation_programming_data + evaluation_management_data + evaluation_credentials_data + evaluation_other_data
+
+
     detailed_analysis_data = sort_by_sec_first_element(detailed_analysis_data)
+    print(detailed_analysis_data)
 
     # Set gui field values
     dpg.set_value("candidate_name", response['candidate_name'])
