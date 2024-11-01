@@ -3,3 +3,5 @@
 .venv
 **/*.pyc
 **/test.py
+**/temp*
+**/code/resumes/*
