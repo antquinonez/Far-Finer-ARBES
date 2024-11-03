@@ -2,12 +2,21 @@ from chromadb import PersistentClient
 from llama_index.core import Document, Settings
 from llama_index.core import VectorStoreIndex, StorageContext
 from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.core.embeddings import HuggingFaceEmbedding
+from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from typing import List, Dict, Optional
 import pandas as pd
 import chromadb
-from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+import os
+import logging
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class EntitySkillsProcessor:
     def __init__(self, persist_dir: str = "./entity_skills_db", force_reset: bool = True):
@@ -18,8 +27,15 @@ class EntitySkillsProcessor:
             persist_dir: Directory for ChromaDB persistence
             force_reset: If True, forces a reset of the collection to ensure consistent embeddings
         """
-        # Set up embedding function (using same model for both ChromaDB and LlamaIndex)
-        self.embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+        # Ensure OpenAI API key is available
+        if not os.getenv("OPENAI_API_KEY"):
+            raise ValueError("OPENAI_API_KEY environment variable must be set")
+            
+        # Set up embedding function for ChromaDB
+        self.embedding_function = OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model_name="text-embedding-3-large"
+        )
         
         # Initialize ChromaDB with PersistentClient
         self.chroma_client = PersistentClient(path=persist_dir)
@@ -41,8 +57,11 @@ class EntitySkillsProcessor:
         
         self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
         
-        # Set up LlamaIndex to use the same embedding model
-        Settings.embed_model = HuggingFaceEmbedding(model_name="all-MiniLM-L6-v2")
+        # Set up LlamaIndex to use the same OpenAI embedding model
+        Settings.embed_model = OpenAIEmbedding(
+            model="text-embedding-3-large",
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
         
         self.persist_dir = persist_dir
 
