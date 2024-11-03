@@ -24,13 +24,17 @@ class EntitySkillsProcessor:
     EMBEDDING_MODEL = "text-embedding-3-large"
     EMBEDDING_DIMENSION = 1536  # Fixed dimension for text-embedding-3-large
 
-    def __init__(self, persist_dir: str = "../entity_skills_db", force_reset: bool = False):
+    def __init__(self, 
+                 persist_dir: str = "../entity_skills_db", 
+                 force_reset: bool = False, 
+                 delete_entity_names: Optional[List[str]] = None):
         """
         Initialize the EntitySkillsProcessor
         
         Args:
             persist_dir: Directory for ChromaDB persistence
-            force_reset: If True, forces a reset of the collection. Defaults to False.
+            force_reset: If True, forces a reset of the entire collection. Defaults to False.
+            delete_entity_names: List of entity names whose data should be deleted during initialization
         """
         if not os.getenv("OPENAI_API_KEY"):
             raise ValueError("OPENAI_API_KEY environment variable must be set")
@@ -52,6 +56,34 @@ class EntitySkillsProcessor:
         Settings.embed_model = self.llama_ef
         
         self._initialize_collection(force_reset)
+        
+        # Delete entity data if entity names are provided
+        if delete_entity_names:
+            for entity_name in delete_entity_names:
+                self.delete_entity_data(entity_name)
+
+    def delete_entity_data(self, entity_name: str) -> None:
+        """
+        Delete all data associated with a specific entity
+        
+        Args:
+            entity_name: Name of the entity whose data should be deleted
+        """
+        try:
+            existing_docs = self.skills_collection.get(
+                where={"entity_name": entity_name}
+            )
+            
+            if existing_docs and existing_docs['ids']:
+                self.skills_collection.delete(
+                    ids=existing_docs['ids']
+                )
+                logger.info(f"Deleted {len(existing_docs['ids'])} existing documents for entity: {entity_name}")
+            else:
+                logger.info(f"No existing documents found for entity: {entity_name}")
+        except Exception as e:
+            logger.error(f"Error while trying to delete documents for entity {entity_name}: {e}")
+            raise
 
     def _initialize_collection(self, force_reset: bool) -> None:
         """Initialize the ChromaDB collection with proper error handling."""
@@ -64,6 +96,7 @@ class EntitySkillsProcessor:
                 logger.warning(f"Deleted persistence directory: {self.persist_dir}")
         except Exception as e:
             logger.error(f"Error deleting persistence directory: {e}")
+            raise
         
         # Initialize ChromaDB client
         self.chroma_client = PersistentClient(path=self.persist_dir)
@@ -107,18 +140,7 @@ class EntitySkillsProcessor:
         skills = entity_json.get('skills_df', {}).get('value', [])
         
         # Delete existing entries for this entity
-        try:
-            existing_docs = self.skills_collection.get(
-                where={"entity_name": entity_name}
-            )
-            
-            if existing_docs and existing_docs['ids']:
-                self.skills_collection.delete(
-                    ids=existing_docs['ids']
-                )
-                logger.info(f"Deleted {len(existing_docs['ids'])} existing documents for entity: {entity_name}")
-        except Exception as e:
-            logger.warning(f"Error while trying to delete existing documents: {e}")
+        self.delete_entity_data(entity_name)
         
         # Prepare new documents
         doc_ids = []
@@ -171,7 +193,7 @@ class EntitySkillsProcessor:
         index = VectorStoreIndex.from_documents(
             enhanced_docs,
             storage_context=storage_context,
-            embed_model=self.llama_ef,  # Explicitly pass the embedding model
+            embed_model=self.llama_ef,
             show_progress=True
         )
         
