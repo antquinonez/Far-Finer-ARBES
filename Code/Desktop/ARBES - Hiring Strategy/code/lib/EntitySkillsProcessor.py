@@ -1,3 +1,10 @@
+
+import chromadb
+import pandas as pd
+import os
+import logging
+import shutil
+
 from chromadb import PersistentClient
 from llama_index.core import Document, Settings
 from llama_index.core import VectorStoreIndex, StorageContext
@@ -5,13 +12,9 @@ from llama_index.core.query_engine import RetrieverQueryEngine
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from typing import List, Dict, Optional
-import pandas as pd
-import chromadb
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-import os
-import logging
-import shutil
 from chromadb.errors import InvalidDimensionException
+
 
 from dotenv import load_dotenv
 
@@ -40,13 +43,15 @@ class EntitySkillsProcessor:
             raise ValueError("OPENAI_API_KEY environment variable must be set")
         
         self.persist_dir = persist_dir
+        self._deleted_entities = set()  # Track which entities have been deleted
         
-        # Initialize OpenAI embedding for both ChromaDB and LlamaIndex
+        # Initialize OpenAI embedding function for ChromaDB
         self.openai_ef = OpenAIEmbeddingFunction(
             api_key=os.getenv("OPENAI_API_KEY"),
             model_name=self.EMBEDDING_MODEL
         )
         
+        # Initialize OpenAI embedding for LlamaIndex
         self.llama_ef = OpenAIEmbedding(
             model=self.EMBEDDING_MODEL,
             api_key=os.getenv("OPENAI_API_KEY")
@@ -55,6 +60,8 @@ class EntitySkillsProcessor:
         # Set the embedding model in Settings
         Settings.embed_model = self.llama_ef
         
+        # Initialize collection and vector store
+        self.vector_store = None
         self._initialize_collection(force_reset)
         
         # Delete entity data if entity names are provided
@@ -70,6 +77,11 @@ class EntitySkillsProcessor:
             entity_name: Name of the entity whose data should be deleted
         """
         try:
+            # Skip if we've already deleted this entity's data in this session
+            if entity_name in self._deleted_entities:
+                logger.debug(f"Skipping deletion for {entity_name} - already deleted in this session")
+                return
+                
             existing_docs = self.skills_collection.get(
                 where={"entity_name": entity_name}
             )
@@ -80,13 +92,17 @@ class EntitySkillsProcessor:
                 )
                 logger.info(f"Deleted {len(existing_docs['ids'])} existing documents for entity: {entity_name}")
             else:
-                logger.info(f"No existing documents found for entity: {entity_name}")
+                logger.debug(f"No documents found to delete for entity: {entity_name}")
+            
+            # Mark this entity as deleted for this session
+            self._deleted_entities.add(entity_name)
+            
         except Exception as e:
             logger.error(f"Error while trying to delete documents for entity {entity_name}: {e}")
             raise
 
     def _initialize_collection(self, force_reset: bool) -> None:
-        """Initialize the ChromaDB collection with proper error handling."""
+        """Initialize ChromaDB collection with proper error handling."""
         collection_name = "entity_skills"
         
         try:
@@ -128,21 +144,23 @@ class EntitySkillsProcessor:
                     metadata={"dimension": self.EMBEDDING_DIMENSION}
                 )
             
+            # Create vector store only once
+            self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
+            
         except Exception as e:
             logger.error(f"Error during collection initialization: {e}")
             raise
-
-        self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
 
     def process_entity_skills(self, entity_json: Dict):
         """Process skills JSON maintaining entity relationship"""
         entity_name = entity_json.get('entity_name', 'Unknown Entity')
         skills = entity_json.get('skills_df', {}).get('value', [])
         
-        # Delete existing entries for this entity
-        self.delete_entity_data(entity_name)
+        # Delete existing entries for this entity if not already deleted
+        if entity_name not in self._deleted_entities:
+            self.delete_entity_data(entity_name)
         
-        # Prepare new documents
+        # Prepare documents
         doc_ids = []
         metadatas = []
         documents = []
@@ -170,31 +188,21 @@ class EntitySkillsProcessor:
             }
             metadatas.append(metadata)
 
-        # Add new documents to ChromaDB
         if documents:
+            # Add to ChromaDB (this will create embeddings)
             self.skills_collection.add(
                 documents=documents,
                 metadatas=metadatas,
                 ids=doc_ids
             )
             logger.info(f"Added {len(documents)} new documents for entity: {entity_name}")
-
-        # Create vector store and index using the same embedding model
-        storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
-        
-        enhanced_docs = [
-            Document(
-                text=doc,
-                metadata=meta,
-                id_=id_
-            ) for doc, meta, id_ in zip(documents, metadatas, doc_ids)
-        ]
-        
-        index = VectorStoreIndex.from_documents(
-            enhanced_docs,
-            storage_context=storage_context,
-            embed_model=self.llama_ef,
-            show_progress=True
-        )
-        
-        return index
+            
+            # Create index directly from the vector store
+            storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
+            
+            index = VectorStoreIndex.from_vector_store(
+                vector_store=self.vector_store,
+                storage_context=storage_context,
+            )
+            
+            return index
