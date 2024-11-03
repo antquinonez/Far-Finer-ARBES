@@ -1,3 +1,4 @@
+import os
 from chromadb import PersistentClient
 from llama_index.core import Document, Settings
 from llama_index.core import VectorStoreIndex, StorageContext
@@ -6,43 +7,39 @@ from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from typing import List, Dict, Optional
 import pandas as pd
-import chromadb
-import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class EntitySkillsProcessor:
-    def __init__(self, persist_dir: str = "./entity_skills_db", openai_api_key: Optional[str] = None):
+    def __init__(self, persist_dir: str = "./entity_skills_db", force_reset: bool = True):
+        """
+        Initialize the EntitySkillsProcessor
+        
+        Args:
+            persist_dir: Directory for ChromaDB persistence
+            force_reset: If True, forces a reset of the collection to ensure consistent embeddings
+        """
         # Initialize ChromaDB with PersistentClient
         self.chroma_client = PersistentClient(path=persist_dir)
         
-        # Initialize collection without specifying embedding function - ChromaDB will use default
-        self.skills_collection = self._get_or_create_collection("entity_skills")
-        self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
+        # Force reset collection if requested
+        if force_reset:
+            try:
+                self.chroma_client.delete_collection("entity_skills")
+                print("Deleted existing collection to ensure consistent embeddings")
+            except ValueError:
+                pass
         
-        # Initialize LlamaIndex settings with OpenAI embeddings if API key provided
-        if openai_api_key:
-            self.embed_model = OpenAIEmbedding(api_key=openai_api_key)
-            Settings.embed_model = self.embed_model
-        
-        self.persist_dir = persist_dir
-
-    def _get_or_create_collection(self, name: str):
-        # Using get_or_create=True and letting ChromaDB use default embedding function
-        return self.chroma_client.create_collection(
-            name=name,
+        # Initialize collection
+        self.skills_collection = self.chroma_client.create_collection(
+            name="entity_skills",
             get_or_create=True
         )
-
-    def _reset_collection(self, name: str):
-        """Delete and recreate the collection"""
-        try:
-            self.chroma_client.delete_collection(name)
-        except Exception:
-            pass
-        return self._get_or_create_collection(name)
+        
+        self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
+        self.persist_dir = persist_dir
 
     def process_entity_skills(self, entity_json: Dict):
         """Process skills JSON maintaining entity relationship"""
@@ -64,10 +61,6 @@ class EntitySkillsProcessor:
                 print(f"Deleted {len(existing_docs['ids'])} existing documents for entity: {entity_name}")
         except Exception as e:
             print(f"Warning: Error while trying to delete existing documents: {e}")
-            # If we hit a dimension mismatch, reset the collection
-            if isinstance(e, chromadb.errors.InvalidDimensionException):
-                print("Resetting collection due to dimension mismatch...")
-                self.skills_collection = self._reset_collection("entity_skills")
         
         enhanced_docs = []
         doc_ids = []
