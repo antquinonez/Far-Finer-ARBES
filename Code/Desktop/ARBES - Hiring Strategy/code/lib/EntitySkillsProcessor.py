@@ -1,16 +1,13 @@
-import os
 from chromadb import PersistentClient
 from llama_index.core import Document, Settings
 from llama_index.core import VectorStoreIndex, StorageContext
 from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.core.embeddings import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from typing import List, Dict, Optional
 import pandas as pd
-
-from dotenv import load_dotenv
-
-load_dotenv()
+import chromadb
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 class EntitySkillsProcessor:
     def __init__(self, persist_dir: str = "./entity_skills_db", force_reset: bool = True):
@@ -21,6 +18,9 @@ class EntitySkillsProcessor:
             persist_dir: Directory for ChromaDB persistence
             force_reset: If True, forces a reset of the collection to ensure consistent embeddings
         """
+        # Set up embedding function (using same model for both ChromaDB and LlamaIndex)
+        self.embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+        
         # Initialize ChromaDB with PersistentClient
         self.chroma_client = PersistentClient(path=persist_dir)
         
@@ -32,13 +32,18 @@ class EntitySkillsProcessor:
             except ValueError:
                 pass
         
-        # Initialize collection
+        # Initialize collection with the embedding function
         self.skills_collection = self.chroma_client.create_collection(
             name="entity_skills",
-            get_or_create=True
+            get_or_create=True,
+            embedding_function=self.embedding_function
         )
         
         self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
+        
+        # Set up LlamaIndex to use the same embedding model
+        Settings.embed_model = HuggingFaceEmbedding(model_name="all-MiniLM-L6-v2")
+        
         self.persist_dir = persist_dir
 
     def process_entity_skills(self, entity_json: Dict):
@@ -116,3 +121,5 @@ class EntitySkillsProcessor:
             storage_context=storage_context,
             show_progress=True
         )
+        
+        return index
