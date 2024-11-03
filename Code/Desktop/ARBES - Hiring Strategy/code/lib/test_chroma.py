@@ -19,11 +19,11 @@ embedding_function = OpenAIEmbeddingFunction(
 def clean_metadata(metadata):
     """Remove internal metadata and keep only relevant fields"""
     relevant_fields = {
-        'metadata.entity_name',
-        'metadata.skill_name',
-        'metadata.type',
-        'metadata.source_details',
-        'metadata.labels'
+        'entity_name',
+        'skill_name',
+        'type',
+        'source_details',
+        'labels'
     }
     return {k: v for k, v in metadata.items() if k in relevant_fields}
 
@@ -34,36 +34,47 @@ try:
         embedding_function=embedding_function
     )
     
-    # Query with where filter to ensure unique entities
-    query_results = collection.query(
+    # First, get all unique entities that have Python-related skills
+    all_results = collection.query(
         query_texts=["python programming"],
-        n_results=5,
+        n_results=20,  # Increase this to ensure we get enough results
         include=["documents", "metadatas", "distances"]
     )
     
-    # Track seen entities to avoid duplicates
-    seen_entities = set()
+    # Track entities and their best matching documents
+    entity_results = {}
+    
+    # Process results and keep the best match per entity
+    for idx, (doc, metadata, distance) in enumerate(zip(
+        all_results['documents'][0],
+        all_results['metadatas'][0],
+        all_results['distances'][0]
+    )):
+        entity_name = metadata.get('entity_name')
+        
+        # If we haven't seen this entity or this is a better match
+        if entity_name not in entity_results or distance < entity_results[entity_name]['distance']:
+            entity_results[entity_name] = {
+                'document': doc,
+                'metadata': metadata,
+                'distance': distance
+            }
+    
+    # Sort entities by their best match distance
+    sorted_entities = sorted(entity_results.items(), key=lambda x: x[1]['distance'])
     
     print("\n=== Python Programming Skills Results ===\n")
     
-    for idx, (doc, metadata, distance) in enumerate(zip(
-        query_results['documents'][0],
-        query_results['metadatas'][0],
-        query_results['distances'][0]
-    )):
-        entity_name = metadata.get('metadata.entity_name')
-        
-        # Skip if we've already seen this entity
-        if entity_name in seen_entities:
-            continue
-            
-        seen_entities.add(entity_name)
-        
-        print(f"\nResult {len(seen_entities)}:")
-        print(f"Document:\n{doc.strip()}")
-        print(f"\nMetadata:", json.dumps(clean_metadata(metadata), indent=2))
-        print(f"Distance: {distance:.4f}")
+    # Print the top 5 entities (or all if less than 5)
+    for i, (entity_name, result) in enumerate(sorted_entities[:5], 1):
+        print(f"\nResult {i} - Entity: {entity_name}")
+        print(f"Document:\n{result['document'].strip()}")
+        print(f"\nMetadata:", json.dumps(clean_metadata(result['metadata']), indent=2))
+        print(f"Distance: {result['distance']:.4f}")
         print("-" * 80)
+    
+    print(f"\nTotal unique entities found: {len(entity_results)}")
 
 except Exception as e:
     print(f"Error accessing collection: {str(e)}")
+    raise
