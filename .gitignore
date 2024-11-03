@@ -6,3 +6,6 @@
 **/temp*
 **/code/resumes/*
 **/*_db/*
+**/test*.py
+**/Test*.ipynb
+**/ce.py
