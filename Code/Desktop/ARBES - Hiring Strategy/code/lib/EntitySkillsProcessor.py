@@ -10,6 +10,8 @@ import chromadb
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 import os
 import logging
+import shutil
+from chromadb.errors import InvalidDimensionException
 
 from dotenv import load_dotenv
 
@@ -19,51 +21,85 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 class EntitySkillsProcessor:
-    def __init__(self, persist_dir: str = "./entity_skills_db", force_reset: bool = True):
+    EMBEDDING_MODEL = "text-embedding-3-large"
+    EMBEDDING_DIMENSION = 1536  # Fixed dimension for text-embedding-3-large
+
+    def __init__(self, persist_dir: str = "../entity_skills_db", force_reset: bool = False):
         """
         Initialize the EntitySkillsProcessor
         
         Args:
             persist_dir: Directory for ChromaDB persistence
-            force_reset: If True, forces a reset of the collection to ensure consistent embeddings
+            force_reset: If True, forces a reset of the collection. Defaults to False.
         """
-        # Ensure OpenAI API key is available
         if not os.getenv("OPENAI_API_KEY"):
             raise ValueError("OPENAI_API_KEY environment variable must be set")
-            
-        # Set up embedding function for ChromaDB
-        self.embedding_function = OpenAIEmbeddingFunction(
+        
+        self.persist_dir = persist_dir
+        
+        # Initialize OpenAI embedding for both ChromaDB and LlamaIndex
+        self.openai_ef = OpenAIEmbeddingFunction(
             api_key=os.getenv("OPENAI_API_KEY"),
-            model_name="text-embedding-3-large"
+            model_name=self.EMBEDDING_MODEL
         )
         
-        # Initialize ChromaDB with PersistentClient
-        self.chroma_client = PersistentClient(path=persist_dir)
-        
-        # Force reset collection if requested
-        if force_reset:
-            try:
-                self.chroma_client.delete_collection("entity_skills")
-                print("Deleted existing collection to ensure consistent embeddings")
-            except ValueError:
-                pass
-        
-        # Initialize collection with the embedding function
-        self.skills_collection = self.chroma_client.create_collection(
-            name="entity_skills",
-            get_or_create=True,
-            embedding_function=self.embedding_function
-        )
-        
-        self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
-        
-        # Set up LlamaIndex to use the same OpenAI embedding model
-        Settings.embed_model = OpenAIEmbedding(
-            model="text-embedding-3-large",
+        self.llama_ef = OpenAIEmbedding(
+            model=self.EMBEDDING_MODEL,
             api_key=os.getenv("OPENAI_API_KEY")
         )
         
-        self.persist_dir = persist_dir
+        # Set the embedding model in Settings
+        Settings.embed_model = self.llama_ef
+        
+        self._initialize_collection(force_reset)
+
+    def _initialize_collection(self, force_reset: bool) -> None:
+        """Initialize the ChromaDB collection with proper error handling."""
+        collection_name = "entity_skills"
+        
+        try:
+            # Force delete the persist directory if force_reset
+            if force_reset and os.path.exists(self.persist_dir):
+                shutil.rmtree(self.persist_dir)
+                logger.warning(f"Deleted persistence directory: {self.persist_dir}")
+        except Exception as e:
+            logger.error(f"Error deleting persistence directory: {e}")
+        
+        # Initialize ChromaDB client
+        self.chroma_client = PersistentClient(path=self.persist_dir)
+        
+        try:
+            # Always try to delete existing collection first if force_reset
+            if force_reset:
+                try:
+                    self.chroma_client.delete_collection(collection_name)
+                    logger.warning("Deleted existing collection")
+                except ValueError:
+                    pass
+            
+            # Create new collection or get existing
+            self.skills_collection = self.chroma_client.create_collection(
+                name=collection_name,
+                embedding_function=self.openai_ef,
+                metadata={"dimension": self.EMBEDDING_DIMENSION},
+                get_or_create=True
+            )
+            
+            # Verify dimension
+            if self.skills_collection.metadata.get("dimension") != self.EMBEDDING_DIMENSION:
+                logger.warning("Dimension mismatch detected. Forcing collection reset.")
+                self.chroma_client.delete_collection(collection_name)
+                self.skills_collection = self.chroma_client.create_collection(
+                    name=collection_name,
+                    embedding_function=self.openai_ef,
+                    metadata={"dimension": self.EMBEDDING_DIMENSION}
+                )
+            
+        except Exception as e:
+            logger.error(f"Error during collection initialization: {e}")
+            raise
+
+        self.vector_store = ChromaVectorStore(chroma_collection=self.skills_collection)
 
     def process_entity_skills(self, entity_json: Dict):
         """Process skills JSON maintaining entity relationship"""
@@ -72,21 +108,19 @@ class EntitySkillsProcessor:
         
         # Delete existing entries for this entity
         try:
-            # Get all documents with matching entity name
             existing_docs = self.skills_collection.get(
-                where={"metadata.entity_name": entity_name}
+                where={"entity_name": entity_name}
             )
             
             if existing_docs and existing_docs['ids']:
-                # Delete all documents for this entity
                 self.skills_collection.delete(
                     ids=existing_docs['ids']
                 )
-                print(f"Deleted {len(existing_docs['ids'])} existing documents for entity: {entity_name}")
+                logger.info(f"Deleted {len(existing_docs['ids'])} existing documents for entity: {entity_name}")
         except Exception as e:
-            print(f"Warning: Error while trying to delete existing documents: {e}")
+            logger.warning(f"Error while trying to delete existing documents: {e}")
         
-        enhanced_docs = []
+        # Prepare new documents
         doc_ids = []
         metadatas = []
         documents = []
@@ -95,7 +129,6 @@ class EntitySkillsProcessor:
             doc_id = f"{entity_name.replace(' ', '-')}-skill-{idx}"
             doc_ids.append(doc_id)
             
-            # Create content
             content = f"""
             Entity: {entity_name}
             Skill: {skill_info.get('skill', '')}
@@ -106,23 +139,14 @@ class EntitySkillsProcessor:
             """
             documents.append(content.strip())
 
-            # Store metadata
             metadata = {
-                'metadata.entity_name': entity_name,
-                'metadata.skill_name': skill_info.get('skill', ''),
-                'metadata.type': skill_info.get('type', ''),
-                'metadata.source_details': skill_info.get('source_details', ''),
-                'metadata.labels': ', '.join(skill_info.get('labels', [])),
+                'entity_name': entity_name,
+                'skill_name': skill_info.get('skill', ''),
+                'type': skill_info.get('type', ''),
+                'source_details': skill_info.get('source_details', ''),
+                'labels': ', '.join(skill_info.get('labels', [])),
             }
             metadatas.append(metadata)
-
-            # Create document for LlamaIndex
-            doc = Document(
-                text=content.strip(),
-                metadata=metadata,
-                id_=doc_id
-            )
-            enhanced_docs.append(doc)
 
         # Add new documents to ChromaDB
         if documents:
@@ -131,13 +155,23 @@ class EntitySkillsProcessor:
                 metadatas=metadatas,
                 ids=doc_ids
             )
-            print(f"Added {len(documents)} new documents for entity: {entity_name}")
+            logger.info(f"Added {len(documents)} new documents for entity: {entity_name}")
 
-        # Create storage context and index for LlamaIndex
+        # Create vector store and index using the same embedding model
         storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
+        
+        enhanced_docs = [
+            Document(
+                text=doc,
+                metadata=meta,
+                id_=id_
+            ) for doc, meta, id_ in zip(documents, metadatas, doc_ids)
+        ]
+        
         index = VectorStoreIndex.from_documents(
             enhanced_docs,
             storage_context=storage_context,
+            embed_model=self.llama_ef,  # Explicitly pass the embedding model
             show_progress=True
         )
         
