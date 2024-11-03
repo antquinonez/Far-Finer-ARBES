@@ -169,19 +169,13 @@ class EntitySkillsProcessor:
             doc_id = f"{entity_name.replace(' ', '-')}-skill-{idx}"
             doc_ids.append(doc_id)
             
-            content = f"""
-            Entity: {entity_name}
-            Skill: {skill_info.get('skill', '')}
-            Type: {skill_info.get('type', '')}
-            Evaluation: {skill_info.get('eval', '')}
-            Source Details: {skill_info.get('source_details', '')}
-            Labels: {', '.join(skill_info.get('labels', []))}
-            """
-            documents.append(content.strip())
+            # Modified: Only use the skill value as the document content
+            skill_value = skill_info.get('skill', '').strip()
+            documents.append(skill_value)
 
             metadata = {
                 'entity_name': entity_name,
-                'skill_name': skill_info.get('skill', ''),
+                'skill_name': skill_value,
                 'type': skill_info.get('type', ''),
                 'source_details': skill_info.get('source_details', ''),
                 'labels': ', '.join(skill_info.get('labels', [])),
@@ -189,7 +183,6 @@ class EntitySkillsProcessor:
             metadatas.append(metadata)
 
         if documents:
-            # Add to ChromaDB (this will create embeddings)
             self.skills_collection.add(
                 documents=documents,
                 metadatas=metadatas,
@@ -197,12 +190,9 @@ class EntitySkillsProcessor:
             )
             logger.info(f"Added {len(documents)} new documents for entity: {entity_name}")
             
-            # Create index directly from the vector store
             storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
-            
             index = VectorStoreIndex.from_vector_store(
                 vector_store=self.vector_store,
                 storage_context=storage_context,
             )
-            
             return index

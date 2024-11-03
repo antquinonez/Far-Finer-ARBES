@@ -34,18 +34,19 @@ try:
         embedding_function=embedding_function
     )
     
-    # First, get all unique entities that have Python-related skills
+    # Search for some SKILL
+    skill_query = "AWS"
     all_results = collection.query(
-        query_texts=["python programming"],
+        query_texts=[skill_query],
         n_results=20,  # Increase this to ensure we get enough results
         include=["documents", "metadatas", "distances"]
     )
     
-    # Track entities and their best matching documents
+    # Track entities and their best matching skills
     entity_results = {}
     
     # Process results and keep the best match per entity
-    for idx, (doc, metadata, distance) in enumerate(zip(
+    for idx, (skill_text, metadata, distance) in enumerate(zip(
         all_results['documents'][0],
         all_results['metadatas'][0],
         all_results['distances'][0]
@@ -55,7 +56,7 @@ try:
         # If we haven't seen this entity or this is a better match
         if entity_name not in entity_results or distance < entity_results[entity_name]['distance']:
             entity_results[entity_name] = {
-                'document': doc,
+                'skill': skill_text,
                 'metadata': metadata,
                 'distance': distance
             }
@@ -63,13 +64,13 @@ try:
     # Sort entities by their best match distance
     sorted_entities = sorted(entity_results.items(), key=lambda x: x[1]['distance'])
     
-    print("\n=== Python Programming Skills Results ===\n")
+    print(f"\n=== Entities with {skill_query.title()}-related Skills ===\n")
     
     # Print the top 5 entities (or all if less than 5)
     for i, (entity_name, result) in enumerate(sorted_entities[:5], 1):
         print(f"\nResult {i} - Entity: {entity_name}")
-        print(f"Document:\n{result['document'].strip()}")
-        print(f"\nMetadata:", json.dumps(clean_metadata(result['metadata']), indent=2))
+        print(f"Skill: {result['skill']}")
+        print(f"Metadata:", json.dumps(clean_metadata(result['metadata']), indent=2))
         print(f"Distance: {result['distance']:.4f}")
         print("-" * 80)
     
