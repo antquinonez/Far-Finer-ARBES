@@ -35,7 +35,7 @@ try:
     )
     
     # Search for some SKILL
-    skill_query = "AWS"
+    skill_query = "Python Programming"
     all_results = collection.query(
         query_texts=[skill_query],
         n_results=20,  # Increase this to ensure we get enough results
