@@ -18,7 +18,7 @@ class FFAnthropicCached:
         logger.info("Initializing FFAnthropicCached")
 
         # DEFAULT VALUES
-        default_model = "claude-3-5-sonnet-latest"
+        default_model = "claude-3-5-sonnet-20240620"
         default_max_tokens = 2000       
         default_temperature = 0.5
         
