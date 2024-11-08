@@ -28,8 +28,8 @@ def evaluate_callback():
     system_instr_gen_candidate_eval_role = 'system_instructions_gen_candidate_evaluation_role.md'
     system_instr_det_candidate_eval_role = 'system_instructions_det_candidate_evaluation_role.md'
     
-    sys_ins_gen_can_eval_role_fpath = os.path.join(great_grandparent_dir, 'Prompts', system_instr_gen_candidate_eval_role)
-    sys_ins_det_can_eval_role_fpath = os.path.join(great_grandparent_dir, 'Prompts', system_instr_det_candidate_eval_role)
+    sys_ins_gen_can_eval_role_fpath = os.path.join(great_grandparent_dir, 'Prompts', 'candidate_evaluation', system_instr_gen_candidate_eval_role)
+    sys_ins_det_can_eval_role_fpath = os.path.join(great_grandparent_dir, 'Prompts', 'candidate_evaluation', system_instr_det_candidate_eval_role)
     
     # Read the file
     with open(sys_ins_gen_can_eval_role_fpath, 'r') as file:
