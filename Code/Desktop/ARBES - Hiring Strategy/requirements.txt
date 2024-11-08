@@ -13,3 +13,5 @@ llama-index-embeddings-openai
 python-dotenv
 
 chromadb
+
+anthropic
