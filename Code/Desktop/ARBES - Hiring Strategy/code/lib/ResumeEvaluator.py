@@ -44,39 +44,43 @@ class ResumeEvaluator:
             3: {}   # Stage 3 results
         }
 
-    def _get_system_instructions(self) -> str:
+    def _get_base_instructions(self) -> str:
         """
-        Extract and compose system instructions with evaluation rules and resume template.
+        Get base system instructions without resume content.
         
         Returns:
-            str: Composed system instructions
+            str: Base system instructions with evaluation rules
         """
-        # Get base system instruction from evaluation steps
-        base_instruction = ""
-        for step_name, step_info in self.evaluation_steps.items():
-            if (step_info.get('Type') == 'System Instruction' and 
-                step_info.get('Stage') == 0):
-                base_instruction = step_info.get('Instruction', '')
-                break
-                
+        base_instruction = next(
+            (step_info.get('Instruction', '') 
+             for step_name, step_info in self.evaluation_steps.items()
+             if step_info.get('Type') == 'System Instruction' and 
+             step_info.get('Stage') == 0),
+            ""
+        )
+        
         if not base_instruction:
             raise ValueError("System instructions not found in evaluation steps")
             
-        # Convert evaluation rules to formatted string
         rules_str = json.dumps(self.evaluation_rules, indent=2)
         
-        # Compose the complete system instruction
-        system_instructions = (
+        return (
             f"{base_instruction}\n"
             "=============\n"
             "CANDIDATE EVALUATION CRITERIA\n"
             "==========\n"
             f"{rules_str}\n"
-            "=======\n"
-            "RESUME\n"
-            "=========\n"
         )
         
+        
+        # If resume is already loaded, append it
+        if self.resume_text:
+            system_instructions += f"{self.resume_text}\n"
+            
+        logger.debug(f"Composed system instructions: {system_instructions[:500]}...")
+        return system_instructions
+
+
         # If resume is already loaded, append it
         if self.resume_text:
             system_instructions += f"{self.resume_text}\n"
@@ -103,18 +107,13 @@ class ResumeEvaluator:
         self.current_resume_path = None
         self.stage_results = self._init_stage_results()
         
-        # Initialize LLM with system instructions
-        system_instructions = self._get_system_instructions()
-
-        # Create config dictionary for FFAnthropicCached
-        llm_config = {
+        # Initialize LLM with base system instructions (without resume)
+        self.llm = FFAnthropicCached(config={
             "model": "claude-3-5-haiku-latest",
-            "system_instructions": system_instructions,
+            "system_instructions": self._get_base_instructions(),
             "temperature": 0.5,
             "max_tokens": 2000
-        }
-
-        self.llm = FFAnthropicCached(config=llm_config)
+        })
 
     def _is_supported_file(self, file_path: Path) -> bool:
         """Check if the file is a supported resume format."""
@@ -132,18 +131,6 @@ class ResumeEvaluator:
             self.document_index = VectorStoreIndex.from_documents(documents)
             self.resume_text = "\n".join([doc.text for doc in documents])
             self.current_resume_path = resume_path
-            
-            # Update system instructions with new resume
-            new_system_instructions = self._get_system_instructions()
-            
-            # Update the LLM with new system instructions
-            self.llm = FFAnthropicCached(config={
-                "model": "claude-3-5-haiku-latest",
-                "system_instructions": new_system_instructions,
-                "temperature": 0.5,
-                "max_tokens": 2000
-            })
-            
             logger.info(f"Successfully loaded and indexed resume from {resume_path}")
             return True
         except Exception as e:
@@ -213,7 +200,15 @@ class ResumeEvaluator:
         return results
 
     def _prepare_evaluation_prompt(self, eval_type: str) -> str:
-        """Prepare the evaluation prompt for a specific type."""
+        """
+        Prepare the evaluation prompt for a specific type.
+        
+        Args:
+            eval_type (str): Type of evaluation to prepare prompt for
+            
+        Returns:
+            str: Formatted prompt including resume and evaluation rules
+        """
         rules = {
             name: rule for name, rule in self.evaluation_rules.items()
             if rule.get('Type') == eval_type
@@ -227,6 +222,7 @@ class ResumeEvaluator:
             ""
         )
 
+        # Include resume in prompt instead of system instructions
         prompt = (
             f"RESUME:\n{self.resume_text}\n\n"
             f"EVALUATION INSTRUCTION: {eval_instruction}\n\n"
@@ -242,27 +238,45 @@ class ResumeEvaluator:
                 prompt += f"  Specification: {rule['Specification']}\n"
             prompt += "\n"
         
+
+        logger.debug(f"Prepared evaluation prompt: {prompt}"))
+
         return prompt
 
     def _process_evaluation_response(self, response: str) -> Dict:
         """Process and validate the evaluation response."""
         try:
             clean_response = response.strip('`').replace('json\n', '').replace('\n', '')
+
+            logger.debug(f"Cleaned evaluation response: {clean_response}")
+    
             return json.loads(clean_response)
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing evaluation response: {str(e)}")
             raise
 
     def evaluate_type(self, eval_type: str, stage: int) -> Dict:
-        """Evaluate all rules of a specific type."""
+        """
+        Evaluate all rules of a specific type.
+        
+        Args:
+            eval_type (str): Type of evaluation to perform
+            stage (int): Evaluation stage number
+            
+        Returns:
+            Dict: Evaluation results for the specified type
+        """
         logger.info(f"Starting evaluation for type: {eval_type}")
         
         if not self.resume_text:
             raise ValueError("No resume has been loaded. Please load a resume first.")
         
         prompt = self._prepare_evaluation_prompt(eval_type)
+        
         try:
             response = self.llm.generate_response(prompt)
+            logger.debug(f"Evaluation response: {response}")
+
             results = self._process_evaluation_response(response)
             self.stage_results[stage].update(results)
             return results
@@ -271,7 +285,12 @@ class ResumeEvaluator:
             raise
 
     def evaluate_resume(self) -> Dict:
-        """Perform full resume evaluation following the evaluation steps."""
+        """
+        Perform full resume evaluation following the evaluation steps.
+        
+        Returns:
+            Dict: Combined evaluation results
+        """
         if not self.resume_text:
             raise ValueError("No resume has been loaded. Please load a resume first.")
 
@@ -294,7 +313,12 @@ class ResumeEvaluator:
         return self.get_combined_evaluation()
 
     def get_overall_score(self) -> float:
-        """Calculate the overall score based on weighted Core type evaluations."""
+        """
+        Calculate the overall score based on weighted Core type evaluations.
+        
+        Returns:
+            float: Overall weighted score
+        """
         core_results = self.stage_results[1]
         if not core_results:
             raise ValueError("No evaluation results available")
@@ -317,7 +341,12 @@ class ResumeEvaluator:
         return weighted_sum / total_weight if total_weight > 0 else 0
 
     def get_combined_evaluation(self) -> Dict:
-        """Combine all stage results into a single evaluation result."""
+        """
+        Combine all stage results into a single evaluation result.
+        
+        Returns:
+            Dict: Combined evaluation results with metadata and summary
+        """
         overall_score = self.get_overall_score()
         
         # Determine overall rating based on score
@@ -357,7 +386,12 @@ class ResumeEvaluator:
         return combined_results
 
     def export_results(self, output_path: str) -> None:
-        """Export the combined evaluation results to a JSON file."""
+        """
+        Export the combined evaluation results to a JSON file.
+        
+        Args:
+            output_path (str): Path to save the evaluation results
+        """
         try:
             combined_results = self.get_combined_evaluation()
             with open(output_path, 'w') as f:
