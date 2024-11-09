@@ -44,10 +44,13 @@ class ResumeEvaluator:
             3: {}   # Stage 3 results
         }
 
-    def _get_base_instructions(self) -> str:
+    def _get_base_instructions(self, include_resume: bool = False) -> str:
         """
-        Get base system instructions without resume content.
+        Get base system instructions with optional resume content.
         
+        Args:
+            include_resume (bool): Whether to include resume text in instructions
+            
         Returns:
             str: Base system instructions with evaluation rules
         """
@@ -64,7 +67,7 @@ class ResumeEvaluator:
             
         rules_str = json.dumps(self.evaluation_rules, indent=2)
         
-        return (
+        system_instructions = (
             f"{base_instruction}\n"
             "=============\n"
             "CANDIDATE EVALUATION CRITERIA\n"
@@ -72,21 +75,26 @@ class ResumeEvaluator:
             f"{rules_str}\n"
         )
         
-        
-        # If resume is already loaded, append it
-        if self.resume_text:
-            system_instructions += f"{self.resume_text}\n"
+        # Include resume text if requested and available
+        if include_resume and self.resume_text:
+            system_instructions = (
+                f"{system_instructions}\n"
+                "==========\n"
+                "RESUME TEXT\n"
+                "==========\n"
+                f"{self.resume_text}\n"
+            )
             
-        logger.debug(f"Composed system instructions: {system_instructions[:500]}...")
         return system_instructions
 
-
-        # If resume is already loaded, append it
-        if self.resume_text:
-            system_instructions += f"{self.resume_text}\n"
-            
-        logger.debug(f"Composed system instructions: {system_instructions[:500]}...")
-        return system_instructions
+    def _init_llm(self) -> None:
+        """Initialize or reinitialize the LLM with current resume content."""
+        self.llm = FFAnthropicCached(config={
+            "model": "claude-3-5-haiku-latest",
+            "system_instructions": self._get_base_instructions(include_resume=True),
+            "temperature": 0.5,
+            "max_tokens": 2000
+        })
 
     def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
         """
@@ -106,56 +114,7 @@ class ResumeEvaluator:
         self.resume_text = None
         self.current_resume_path = None
         self.stage_results = self._init_stage_results()
-        
-        # Initialize LLM with base system instructions (without resume)
-        self.llm = FFAnthropicCached(config={
-            "model": "claude-3-5-haiku-latest",
-            "system_instructions": self._get_base_instructions(),
-            "temperature": 0.5,
-            "max_tokens": 2000
-        })
-
-    def _is_supported_file(self, file_path: Path) -> bool:
-        """Check if the file is a supported resume format."""
-        return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
-
-    def load_resume(self, resume_path: str) -> bool:
-        """
-        Load and index a resume document.
-        
-        Returns:
-            bool: True if resume was loaded successfully, False otherwise
-        """
-        try:
-            documents = SimpleDirectoryReader(input_files=[resume_path]).load_data()
-            self.document_index = VectorStoreIndex.from_documents(documents)
-            self.resume_text = "\n".join([doc.text for doc in documents])
-            self.current_resume_path = resume_path
-            logger.info(f"Successfully loaded and indexed resume from {resume_path}")
-            return True
-        except Exception as e:
-            logger.error(f"Error loading resume {resume_path}: {str(e)}")
-            return False
-
-    def _get_preferred_name(self) -> str:
-        """
-        Extract preferred name from evaluation results or generate a fallback name.
-        
-        Returns:
-            str: Preferred name from evaluation or formatted timestamp if not found
-        """
-        # Try to get preferred name from stage 1 results
-        preferred_name = self.stage_results[1].get('preferred_name', {}).get('value')
-        
-        if not preferred_name:
-            # Fallback to the original filename without extension
-            preferred_name = Path(self.current_resume_path).stem
-            
-        # Clean the name for file system use
-        safe_name = "".join(c for c in preferred_name if c.isalnum() or c in (' ', '-', '_')).strip()
-        safe_name = safe_name.replace(' ', '_')
-        
-        return safe_name
+        self.llm = None  # Initialize as None, will be created per resume
 
     def evaluate_directory(self, resume_dir: str) -> List[Dict]:
         """
@@ -199,6 +158,52 @@ class ResumeEvaluator:
 
         return results
 
+    def _is_supported_file(self, file_path: Path) -> bool:
+        """Check if the file is a supported resume format."""
+        return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
+
+    def _get_preferred_name(self) -> str:
+        """
+        Extract preferred name from evaluation results or generate a fallback name.
+        
+        Returns:
+            str: Preferred name from evaluation or formatted timestamp if not found
+        """
+        # Try to get preferred name from stage 1 results
+        preferred_name = self.stage_results[1].get('preferred_name', {}).get('value')
+        
+        if not preferred_name:
+            # Fallback to the original filename without extension
+            preferred_name = Path(self.current_resume_path).stem
+            
+        # Clean the name for file system use
+        safe_name = "".join(c for c in preferred_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        safe_name = safe_name.replace(' ', '_')
+        
+        return safe_name
+
+    def load_resume(self, resume_path: str) -> bool:
+        """
+        Load and index a resume document.
+        
+        Returns:
+            bool: True if resume was loaded successfully, False otherwise
+        """
+        try:
+            documents = SimpleDirectoryReader(input_files=[resume_path]).load_data()
+            self.document_index = VectorStoreIndex.from_documents(documents)
+            self.resume_text = "\n".join([doc.text for doc in documents])
+            self.current_resume_path = resume_path
+            
+            # Initialize a new LLM instance with the loaded resume
+            self._init_llm()
+            
+            logger.info(f"Successfully loaded and indexed resume from {resume_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error loading resume {resume_path}: {str(e)}")
+            return False
+
     def _prepare_evaluation_prompt(self, eval_type: str) -> str:
         """
         Prepare the evaluation prompt for a specific type.
@@ -207,7 +212,7 @@ class ResumeEvaluator:
             eval_type (str): Type of evaluation to prepare prompt for
             
         Returns:
-            str: Formatted prompt including resume and evaluation rules
+            str: Formatted prompt including evaluation rules
         """
         rules = {
             name: rule for name, rule in self.evaluation_rules.items()
@@ -222,9 +227,7 @@ class ResumeEvaluator:
             ""
         )
 
-        # Include resume in prompt instead of system instructions
         prompt = (
-            f"RESUME:\n{self.resume_text}\n\n"
             f"EVALUATION INSTRUCTION: {eval_instruction}\n\n"
             "EVALUATION RULES:\n"
         )
@@ -237,23 +240,8 @@ class ResumeEvaluator:
             if rule.get('Specification'):
                 prompt += f"  Specification: {rule['Specification']}\n"
             prompt += "\n"
-        
-
-        logger.debug(f"Prepared evaluation prompt: {prompt}"))
 
         return prompt
-
-    def _process_evaluation_response(self, response: str) -> Dict:
-        """Process and validate the evaluation response."""
-        try:
-            clean_response = response.strip('`').replace('json\n', '').replace('\n', '')
-
-            logger.debug(f"Cleaned evaluation response: {clean_response}")
-    
-            return json.loads(clean_response)
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing evaluation response: {str(e)}")
-            raise
 
     def evaluate_type(self, eval_type: str, stage: int) -> Dict:
         """
@@ -311,6 +299,16 @@ class ResumeEvaluator:
                     raise
 
         return self.get_combined_evaluation()
+
+    def _process_evaluation_response(self, response: str) -> Dict:
+        """Process and validate the evaluation response."""
+        try:
+            clean_response = response.strip('`').replace('json\n', '').replace('\n', '')
+            logger.debug(f"Cleaned evaluation response: {clean_response}")
+            return json.loads(clean_response)
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing evaluation response: {str(e)}")
+            raise
 
     def get_overall_score(self) -> float:
         """
