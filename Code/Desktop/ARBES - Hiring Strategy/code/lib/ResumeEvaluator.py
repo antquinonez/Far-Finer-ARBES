@@ -27,34 +27,14 @@ class ResumeEvaluator:
     
     SUPPORTED_EXTENSIONS: Set[str] = {'.pdf', '.doc', '.docx', '.txt'}
     
-    def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
-        """
-        Initialize the resume evaluator with evaluation rules and steps.
-        
-        Args:
-            evaluation_rules_path (str): Path to evaluation rules JSON
-            evaluation_steps_path (str): Path to evaluation steps JSON
-            output_dir (str): Directory for evaluation results
-        """
-        self.evaluation_rules = self._load_json(evaluation_rules_path)
-        self.evaluation_steps = self._load_json(evaluation_steps_path)
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        self.document_index = None
-        self.resume_text = None
-        self.current_resume_path = None
-        self.stage_results = self._init_stage_results()
-        
-        # Initialize LLM with system instructions
-        system_instructions = self._get_system_instructions()
-
-        self.llm = FFAnthropicCached(
-            config={
-                "model": 'claude-3-5-haiku-latest',
-                "system_instructions": system_instructions
-            }
-        )
+    def _load_json(self, file_path: str) -> Dict:
+        """Load and parse a JSON file."""
+        try:
+            with open(file_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading JSON file {file_path}: {str(e)}")
+            raise
 
     def _init_stage_results(self) -> Dict:
         """Initialize empty stage results structure."""
@@ -104,14 +84,37 @@ class ResumeEvaluator:
         logger.debug(f"Composed system instructions: {system_instructions[:500]}...")
         return system_instructions
 
-    def _load_json(self, file_path: str) -> Dict:
-        """Load and parse a JSON file."""
-        try:
-            with open(file_path, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading JSON file {file_path}: {str(e)}")
-            raise
+    def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
+        """
+        Initialize the resume evaluator with evaluation rules and steps.
+        
+        Args:
+            evaluation_rules_path (str): Path to evaluation rules JSON
+            evaluation_steps_path (str): Path to evaluation steps JSON
+            output_dir (str): Directory for evaluation results
+        """
+        self.evaluation_rules = self._load_json(evaluation_rules_path)
+        self.evaluation_steps = self._load_json(evaluation_steps_path)
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.document_index = None
+        self.resume_text = None
+        self.current_resume_path = None
+        self.stage_results = self._init_stage_results()
+        
+        # Initialize LLM with system instructions
+        system_instructions = self._get_system_instructions()
+
+        # Create config dictionary for FFAnthropicCached
+        llm_config = {
+            "model": "claude-3-5-haiku-latest",
+            "system_instructions": system_instructions,
+            "temperature": 0.5,
+            "max_tokens": 2000
+        }
+
+        self.llm = FFAnthropicCached(config=llm_config)
 
     def _is_supported_file(self, file_path: Path) -> bool:
         """Check if the file is a supported resume format."""
@@ -132,7 +135,14 @@ class ResumeEvaluator:
             
             # Update system instructions with new resume
             new_system_instructions = self._get_system_instructions()
-            self.llm.config["system_instructions"] = new_system_instructions
+            
+            # Update the LLM with new system instructions
+            self.llm = FFAnthropicCached(config={
+                "model": "claude-3-5-haiku-latest",
+                "system_instructions": new_system_instructions,
+                "temperature": 0.5,
+                "max_tokens": 2000
+            })
             
             logger.info(f"Successfully loaded and indexed resume from {resume_path}")
             return True
