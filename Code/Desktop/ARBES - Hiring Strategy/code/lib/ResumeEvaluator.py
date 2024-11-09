@@ -161,7 +161,7 @@ class ResumeEvaluator:
                     except Exception as e:
                         logger.error(f"Error evaluating resume {file_path}: {str(e)}")
                         continue
-                    
+
         logger.debug(f"Evaluation results: {results}")
         return results
 
@@ -310,9 +310,10 @@ class ResumeEvaluator:
     def _process_evaluation_response(self, response: str) -> Dict:
         """Process and validate the evaluation response."""
         try:
-            clean_response = response.strip('`').replace('json\n', '').replace('\n', '')
-            logger.debug(f"Cleaned evaluation response: {clean_response}")
-            return json.loads(clean_response)
+            # Extract just the JSON portion between the first { and last }
+            json_text = response[response.find('{'):response.rfind('}')+1]
+            logger.debug(f"Cleaned evaluation response: {json_text}")
+            return json.loads(json_text)
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing evaluation response: {str(e)}")
             raise
