@@ -65,16 +65,44 @@ class ResumeEvaluator:
         }
 
     def _get_system_instructions(self) -> str:
-        """Extract system instructions from evaluation steps."""
+        """
+        Extract and compose system instructions with evaluation rules and resume template.
+        
+        Returns:
+            str: Composed system instructions
+        """
+        # Get base system instruction from evaluation steps
+        base_instruction = ""
         for step_name, step_info in self.evaluation_steps.items():
             if (step_info.get('Type') == 'System Instruction' and 
                 step_info.get('Stage') == 0):
-
-                system_instructions = step_info.get('Instruction', '')
-
-                logger.debug(f"System Instruction: {system_instructions}")
-                return system_instructions
-        raise ValueError("System instructions not found in evaluation steps")
+                base_instruction = step_info.get('Instruction', '')
+                break
+                
+        if not base_instruction:
+            raise ValueError("System instructions not found in evaluation steps")
+            
+        # Convert evaluation rules to formatted string
+        rules_str = json.dumps(self.evaluation_rules, indent=2)
+        
+        # Compose the complete system instruction
+        system_instructions = (
+            f"{base_instruction}\n"
+            "=============\n"
+            "CANDIDATE EVALUATION CRITERIA\n"
+            "==========\n"
+            f"{rules_str}\n"
+            "=======\n"
+            "RESUME\n"
+            "=========\n"
+        )
+        
+        # If resume is already loaded, append it
+        if self.resume_text:
+            system_instructions += f"{self.resume_text}\n"
+            
+        logger.debug(f"Composed system instructions: {system_instructions[:500]}...")
+        return system_instructions
 
     def _load_json(self, file_path: str) -> Dict:
         """Load and parse a JSON file."""
@@ -101,6 +129,11 @@ class ResumeEvaluator:
             self.document_index = VectorStoreIndex.from_documents(documents)
             self.resume_text = "\n".join([doc.text for doc in documents])
             self.current_resume_path = resume_path
+            
+            # Update system instructions with new resume
+            new_system_instructions = self._get_system_instructions()
+            self.llm.config["system_instructions"] = new_system_instructions
+            
             logger.info(f"Successfully loaded and indexed resume from {resume_path}")
             return True
         except Exception as e:
@@ -323,4 +356,3 @@ class ResumeEvaluator:
         except Exception as e:
             logger.error(f"Error exporting results: {str(e)}")
             raise
-
