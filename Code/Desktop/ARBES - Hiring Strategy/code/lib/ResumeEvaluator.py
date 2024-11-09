@@ -146,16 +146,23 @@ class ResumeEvaluator:
                         # Evaluate the resume
                         evaluation_result = self.evaluate_resume()
                         results.append(evaluation_result)
+
+                        logger.debug(f"Evaluation results: {evaluation_result}")
                         
                         # Export results with preferred name
                         preferred_name = self._get_preferred_name()
+                        logger.debug(f"Preferred name: {preferred_name}")
+
                         output_path = self.output_dir / f"{preferred_name}_evaluation.json"
+                        logger.info(f"Exporting results to {output_path}")
+
                         self.export_results(str(output_path))
                         
                     except Exception as e:
                         logger.error(f"Error evaluating resume {file_path}: {str(e)}")
                         continue
-
+                    
+        logger.debug(f"Evaluation results: {results}")
         return results
 
     def _is_supported_file(self, file_path: Path) -> bool:
