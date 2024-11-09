@@ -319,11 +319,9 @@ class ResumeEvaluator:
             raise
 
     def get_overall_score(self) -> float:
+        logger.debug("Calculating overall score")
         """
         Calculate the overall score based on weighted Core type evaluations.
-        
-        Returns:
-            float: Overall weighted score
         """
         core_results = self.stage_results[1]
         if not core_results:
@@ -331,7 +329,9 @@ class ResumeEvaluator:
 
         core_rules = {
             name: rule for name, rule in self.evaluation_rules.items()
-            if rule.get('Type') == 'Core' and rule.get('is_contribute_rating_overall') == 'True'
+            if rule.get('Type') == 'Core' 
+            and rule.get('is_contribute_rating_overall') == 'True'
+            and rule.get('value_type') in ('Integer', 'Decimal')  # Only include numeric types
         }
 
         total_weight = 0
@@ -339,10 +339,14 @@ class ResumeEvaluator:
 
         for name, rule in core_rules.items():
             if name in core_results:
-                weight = float(rule.get('Weight', 0))
-                value = float(core_results[name].get('value', 0))
-                weighted_sum += weight * value
-                total_weight += weight
+                try:
+                    weight = float(rule.get('Weight', 0))
+                    value = float(core_results[name].get('value', 0))
+                    weighted_sum += weight * value
+                    total_weight += weight
+                except (TypeError, ValueError):
+                    logger.warning(f"Skipping non-numeric value for {name}")
+                    continue
 
         return weighted_sum / total_weight if total_weight > 0 else 0
 
