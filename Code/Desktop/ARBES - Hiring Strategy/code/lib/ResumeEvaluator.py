@@ -5,6 +5,7 @@ import sys
 import os
 import json
 import logging
+import shutil
 from dotenv import load_dotenv
 
 from llama_index.core import VectorStoreIndex
@@ -404,16 +405,40 @@ class ResumeEvaluator:
 
     def export_results(self, output_path: str) -> None:
         """
-        Export the combined evaluation results to a JSON file.
+        Export the combined evaluation results to a JSON file and move the processed resume.
         
         Args:
             output_path (str): Path to save the evaluation results
         """
         try:
+            # Export the evaluation results
             combined_results = self.get_combined_evaluation()
             with open(output_path, 'w') as f:
                 json.dump(combined_results, f, indent=2)
             logger.info(f"Results exported to {output_path}")
+            
+            # Move the processed resume to the 'processed' folder
+            if self.current_resume_path:
+                resume_path = Path(self.current_resume_path)
+                processed_dir = resume_path.parent / 'processed'
+                
+                # Create processed directory if it doesn't exist
+                processed_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Generate destination path
+                dest_path = processed_dir / resume_path.name
+                
+                # Handle case where file with same name exists in processed folder
+                counter = 1
+                while dest_path.exists():
+                    new_name = f"{resume_path.stem}_{counter}{resume_path.suffix}"
+                    dest_path = processed_dir / new_name
+                    counter += 1
+                
+                # Move the file
+                shutil.move(str(resume_path), str(dest_path))
+                logger.info(f"Moved processed resume to {dest_path}")
+            
         except Exception as e:
             logger.error(f"Error exporting results: {str(e)}")
             raise
