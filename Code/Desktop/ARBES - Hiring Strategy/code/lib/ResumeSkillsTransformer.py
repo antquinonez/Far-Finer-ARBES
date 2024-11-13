@@ -125,12 +125,12 @@ class ResumeSkillsTransformer:
         self.merge_stages()
         
         # Perform all skills transformations
-        self.transform_generic_skills()
-        self.transform_listed_skills()
-        self.transform_detailed_skills()
-        self.transform_verified_skills()
-        self.transform_alt_names()
         self.transform_non_technical_skills()
+        self.transform_verified_skills()
+        self.transform_detailed_skills()
+        self.transform_listed_skills()
+        self.transform_generic_skills()
+        self.transform_alt_names()
         
         # Create new integrated JSON structure
         integrated_json = {
