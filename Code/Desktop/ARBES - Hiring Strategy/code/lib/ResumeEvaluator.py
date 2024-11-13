@@ -11,6 +11,10 @@ from llama_index.core import VectorStoreIndex
 from llama_index.core.readers import SimpleDirectoryReader
 from llama_index.core.schema import Document
 
+
+from .ResumeSkillsTransformer import ResumeSkillsTransformer
+
+
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..', '..')))
@@ -393,7 +397,10 @@ class ResumeEvaluator:
             }
         }
 
-        return combined_results
+        # transform data from stages and merge into a single data structure
+        transformer = ResumeSkillsTransformer(combined_results)
+
+        return transformer.create_integrated_json()
 
     def export_results(self, output_path: str) -> None:
         """
