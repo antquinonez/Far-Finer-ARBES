@@ -10,4 +10,6 @@
 **/Test*.ipynb
 **/ce.py
 **/*_Resume_evaluation*
-*Resume.*
+**/evaluation_results/*
+**/resumes_old/processed/**
+**/resumes_old/to_proc/*
