@@ -7,6 +7,7 @@ import logging
 from typing import Optional, List
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from copy import deepcopy
 
 load_dotenv()
 
@@ -41,6 +42,7 @@ class FFAnthropicCached:
 
         self.system_instructions = config.get('system_instructions', default_instructions) if config else os.getenv('ANTHROPIC_ASSISTANT_INSTRUCTIONS', default_instructions)
         self.conversation_history = ConversationHistory()
+        self.permanent_history = PermanentHistory()
              
         self.client: Anthropic = self._initialize_client()
 
@@ -60,6 +62,7 @@ class FFAnthropicCached:
         logger.debug(f"Using model: {model if model else self.model}")
         try: 
             self.conversation_history.add_turn_user(prompt)
+            self.permanent_history.add_turn_user(prompt)
 
             turns = self.conversation_history.get_turns()
             if not turns:
@@ -81,6 +84,7 @@ class FFAnthropicCached:
 
             assistant_response = response.content[0].text
             self.conversation_history.add_turn_assistant(assistant_response)
+            self.permanent_history.add_turn_assistant(assistant_response)
             
             logger.info("Response generated successfully")
             return assistant_response
@@ -96,8 +100,12 @@ class FFAnthropicCached:
             raise RuntimeError(f"Error generating response from Claude: {str(e)}")
 
     def clear_conversation(self):
-        logger.info("Clearing conversation history")
+        logger.info("Clearing conversation history (permanent history retained)")
         self.conversation_history = ConversationHistory()
+
+    def get_permanent_history(self):
+        """Returns all turns from the permanent history."""
+        return self.permanent_history.get_all_turns()
 
 class ConversationHistory:
     def __init__(self):
@@ -145,3 +153,45 @@ class ConversationHistory:
             else:
                 result.append(turn)
         return result
+
+class PermanentHistory:
+    def __init__(self):
+        self.turns = []
+        self.timestamp = time.time()
+
+    def add_turn_assistant(self, content):
+        self.turns.append({
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": content
+                }
+            ],
+            "timestamp": time.time()
+        })
+
+    def add_turn_user(self, content):
+        if self.turns and self.turns[-1]["role"] == "user":
+            # If the last turn was a user, update its content instead of adding a new turn
+            self.turns[-1]["content"][0]["text"] += "\n" + content
+            self.turns[-1]["timestamp"] = time.time()
+        else:
+            self.turns.append({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": content
+                    }
+                ],
+                "timestamp": time.time()
+            })
+
+    def get_all_turns(self):
+        """Returns all turns with their timestamps."""
+        return deepcopy(self.turns)  # Return a deep copy to prevent modification
+
+    def get_turns_since(self, timestamp: float):
+        """Returns all turns that occurred after the specified timestamp."""
+        return [turn for turn in self.turns if turn["timestamp"] > timestamp]
