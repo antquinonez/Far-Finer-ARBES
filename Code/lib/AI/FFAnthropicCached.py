@@ -55,8 +55,9 @@ class FFAnthropicCached:
             raise ValueError("API key not found")
         return Anthropic(api_key=api_key)
 
-    def generate_response(self, prompt: str) -> str:
+    def generate_response(self, prompt: str, model: Optional[str] = None) -> str:
         logger.debug(f"Generating response for prompt: {prompt}")
+        logger.debug(f"Using model: {model if model else self.model}")
         try: 
             self.conversation_history.add_turn_user(prompt)
 
@@ -66,7 +67,7 @@ class FFAnthropicCached:
                 raise ValueError("Conversation history is empty")
 
             response = self.client.messages.create(
-                model=self.model,
+                model=model if model else self.model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 system=[{
@@ -86,7 +87,7 @@ class FFAnthropicCached:
         except Exception as e:
             logger.error("Problem with response generation")
             logger.error(f"  -- exception: {str(e)}")
-            logger.error(f"  -- model: {self.model}")
+            logger.error(f"  -- model: {model if model else self.model}")
             logger.error(f"  -- system: {self.system_instructions}")
             logger.error(f"  -- conversation history: {self.conversation_history.get_turns()}")
             logger.error(f"  -- max_tokens: {self.max_tokens}")
