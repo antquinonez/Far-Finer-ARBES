@@ -98,7 +98,7 @@ class ResumeEvaluator:
             "model": "claude-3-5-haiku-latest",
             "system_instructions": self._get_base_instructions(include_resume=True),
             "temperature": 0.5,
-            "max_tokens": 2000
+            "max_tokens": 4000
         })
 
     def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
