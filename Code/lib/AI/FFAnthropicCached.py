@@ -1,13 +1,18 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 
-import os
-import time
-import logging
-from typing import Optional, List
 from anthropic import Anthropic
-from dotenv import load_dotenv
 from copy import deepcopy
+from dataclasses import dataclass
+from datetime import datetime
+from dotenv import load_dotenv
+from typing import Optional, List, Dict, Any, Tuple
+import logging
+import os
+
+from .OrderedHistory import OrderedHistory
+from .ConversationHistory import ConversationHistory
+from .PermanentHistory import PermanentHistory
 
 load_dotenv()
 
@@ -41,8 +46,10 @@ class FFAnthropicCached:
         self.temperature = float(all_config.get('temperature', default_temperature)) if all_config else float(os.getenv('ANTHROPIC_TEMPERATURE', default_temperature))
 
         self.system_instructions = config.get('system_instructions', default_instructions) if config else os.getenv('ANTHROPIC_ASSISTANT_INSTRUCTIONS', default_instructions)
+        
         self.conversation_history = ConversationHistory()
         self.permanent_history = PermanentHistory()
+        self.ordered_history = OrderedHistory()
              
         self.client: Anthropic = self._initialize_client()
 
@@ -59,7 +66,8 @@ class FFAnthropicCached:
 
     def generate_response(self, prompt: str, model: Optional[str] = None) -> str:
         logger.debug(f"Generating response for prompt: {prompt}")
-        logger.debug(f"Using model: {model if model else self.model}")
+        used_model = model if model else self.model
+        logger.debug(f"Using model: {used_model}")
         try: 
             self.conversation_history.add_turn_user(prompt)
             self.permanent_history.add_turn_user(prompt)
@@ -70,7 +78,7 @@ class FFAnthropicCached:
                 raise ValueError("Conversation history is empty")
 
             response = self.client.messages.create(
-                model=model if model else self.model,
+                model=used_model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 system=[{
@@ -83,15 +91,18 @@ class FFAnthropicCached:
             )
 
             assistant_response = response.content[0].text
+
             self.conversation_history.add_turn_assistant(assistant_response)
             self.permanent_history.add_turn_assistant(assistant_response)
+            self.ordered_history.add_interaction(used_model, prompt, assistant_response)
             
             logger.info("Response generated successfully")
             return assistant_response
+        
         except Exception as e:
             logger.error("Problem with response generation")
             logger.error(f"  -- exception: {str(e)}")
-            logger.error(f"  -- model: {model if model else self.model}")
+            logger.error(f"  -- model: {used_model}")
             logger.error(f"  -- system: {self.system_instructions}")
             logger.error(f"  -- conversation history: {self.conversation_history.get_turns()}")
             logger.error(f"  -- max_tokens: {self.max_tokens}")
@@ -99,99 +110,45 @@ class FFAnthropicCached:
             
             raise RuntimeError(f"Error generating response from Claude: {str(e)}")
 
+    # OrderedHistory interface methods
+    def get_interaction_history(self) -> List[Dict[str, Any]]:
+        """Get all interactions as a list of dictionaries"""
+        return self.ordered_history.to_dict_list()
+    
+    def get_last_n_interactions(self, n: int) -> List[Dict[str, Any]]:
+        """Get the last n interactions as dictionaries"""
+        return [i.to_dict() for i in self.ordered_history.get_last_n_interactions(n)]
+    
+    def get_interaction(self, sequence_number: int) -> Optional[Dict[str, Any]]:
+        """Get a specific interaction by sequence number"""
+        interaction = self.ordered_history.get_interaction_by_sequence(sequence_number)
+        return interaction.to_dict() if interaction else None
+    
+    def get_model_interactions(self, model: str) -> List[Dict[str, Any]]:
+        """Get all interactions for a specific model"""
+        return [i.to_dict() for i in self.ordered_history.get_interactions_by_model(model)]
+    
+    def get_interactions_between(self, start_time: float, end_time: Optional[float] = None) -> List[Dict[str, Any]]:
+        """Get interactions within a timeframe"""
+        return [i.to_dict() for i in self.ordered_history.get_interactions_in_timeframe(start_time, end_time)]
+    
+    def get_latest_interaction(self) -> Optional[Dict[str, Any]]:
+        """Get the most recent interaction"""
+        interaction = self.ordered_history.get_latest_interaction()
+        return interaction.to_dict() if interaction else None
+    
+    def get_prompt_history(self) -> List[str]:
+        """Get all prompts in order"""
+        return self.ordered_history.get_prompt_history()
+    
+    def get_response_history(self) -> List[str]:
+        """Get all responses in order"""
+        return self.ordered_history.get_response_history()
+    
+    def get_model_usage_stats(self) -> Dict[str, int]:
+        """Get statistics on model usage"""
+        return self.ordered_history.get_model_usage_stats()
+
     def clear_conversation(self):
-        logger.info("Clearing conversation history (permanent history retained)")
+        logger.info("Clearing conversation history (permanent and ordered histories retained)")
         self.conversation_history = ConversationHistory()
-
-    def get_permanent_history(self):
-        """Returns all turns from the permanent history."""
-        return self.permanent_history.get_all_turns()
-
-class ConversationHistory:
-    def __init__(self):
-        self.turns = []
-
-    def add_turn_assistant(self, content):
-        self.turns.append({
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "text",
-                    "text": content
-                }
-            ]
-        })
-
-    def add_turn_user(self, content):
-        if self.turns and self.turns[-1]["role"] == "user":
-            # If the last turn was a user, update its content instead of adding a new turn
-            self.turns[-1]["content"][0]["text"] += "\n" + content
-        else:
-            self.turns.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": content
-                    }
-                ]
-            })
-
-    def get_turns(self):
-        result = []
-        for turn in self.turns[-100:]:  # Get the last 100 turns
-            if turn["role"] == "user":
-                result.append({
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": turn["content"][0]["text"]
-                        }
-                    ]
-                })
-            else:
-                result.append(turn)
-        return result
-
-class PermanentHistory:
-    def __init__(self):
-        self.turns = []
-        self.timestamp = time.time()
-
-    def add_turn_assistant(self, content):
-        self.turns.append({
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "text",
-                    "text": content
-                }
-            ],
-            "timestamp": time.time()
-        })
-
-    def add_turn_user(self, content):
-        if self.turns and self.turns[-1]["role"] == "user":
-            # If the last turn was a user, update its content instead of adding a new turn
-            self.turns[-1]["content"][0]["text"] += "\n" + content
-            self.turns[-1]["timestamp"] = time.time()
-        else:
-            self.turns.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": content
-                    }
-                ],
-                "timestamp": time.time()
-            })
-
-    def get_all_turns(self):
-        """Returns all turns with their timestamps."""
-        return deepcopy(self.turns)  # Return a deep copy to prevent modification
-
-    def get_turns_since(self, timestamp: float):
-        """Returns all turns that occurred after the specified timestamp."""
-        return [turn for turn in self.turns if turn["timestamp"] > timestamp]
