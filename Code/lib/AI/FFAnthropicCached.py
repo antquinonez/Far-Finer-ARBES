@@ -64,7 +64,7 @@ class FFAnthropicCached:
             raise ValueError("API key not found")
         return Anthropic(api_key=api_key)
 
-    def generate_response(self, prompt: str, model: Optional[str] = None) -> str:
+    def generate_response(self, prompt: str, model: Optional[str] = None, prompt_name: Optional[str] = None) -> str:
         logger.debug(f"Generating response for prompt: {prompt}")
         used_model = model if model else self.model
         logger.debug(f"Using model: {used_model}")
@@ -94,7 +94,7 @@ class FFAnthropicCached:
 
             self.conversation_history.add_turn_assistant(assistant_response)
             self.permanent_history.add_turn_assistant(assistant_response)
-            self.ordered_history.add_interaction(used_model, prompt, assistant_response)
+            self.ordered_history.add_interaction(used_model, prompt, assistant_response, prompt_name=prompt_name)
             
             logger.info("Response generated successfully")
             return assistant_response

@@ -22,6 +22,7 @@ class Interaction:
     sequence_number: int
     model: str
     timestamp: float
+    prompt_name: Optional[str]
     prompt: str
     response: str
     
@@ -30,6 +31,7 @@ class Interaction:
             "sequence_number": self.sequence_number,
             "model": self.model,
             "timestamp": self.timestamp,
+            "prompt_name": self.prompt_name,
             "prompt": self.prompt,
             "response": self.response,
             "datetime": datetime.fromtimestamp(self.timestamp).isoformat()
@@ -40,13 +42,14 @@ class OrderedHistory:
         self.interactions: List[Interaction] = []
         self._current_sequence = 0
     
-    def add_interaction(self, model: str, prompt: str, response: str) -> Interaction:
+    def add_interaction(self, model: str, prompt: str, response: str, prompt_name: Optional[str] = None) -> Interaction:
         """Add a new interaction to the history"""
         self._current_sequence += 1
         interaction = Interaction(
             sequence_number=self._current_sequence,
             model=model,
             timestamp=time.time(),
+            prompt_name=prompt_name,
             prompt=prompt,
             response=response
         )
