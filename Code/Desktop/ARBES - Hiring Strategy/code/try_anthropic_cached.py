@@ -51,7 +51,17 @@ def main():
             print("Assistant:", response)
             logger.info("Response generated and displayed to user")
         except Exception as e:
-            logger.error("An error occurred while generating response: %s", str(e))
+            history = ai.get_prompt_dict()
+            print(f"HISTORY: {history}")
+
+            stats = ai.get_prompt_name_usage_stats()
+            print(f"stats: {stats}")
+
+    history = ai.get_prompt_dict()
+    print(f"HISTORY: {history}")
+
+    stats = ai.get_prompt_name_usage_stats()
+    print(f"stats: {stats}")
 
 if __name__ == "__main__":
     main()
