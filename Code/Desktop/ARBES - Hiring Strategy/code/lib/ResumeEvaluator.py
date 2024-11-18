@@ -151,7 +151,7 @@ class ResumeEvaluator:
             self.resume_text = "\n".join([doc.text for doc in documents])
             self.current_resume_path = resume_path
             
-            # Initialize LLM with resume in system instructions
+            # Initialize LLM if needed
             self._init_llm()
             
             logger.info(f"Successfully loaded and indexed resume from {resume_path}")
@@ -160,19 +160,18 @@ class ResumeEvaluator:
             logger.error(f"Error loading resume {resume_path}: {str(e)}")
             return False
 
-    def _init_llm(self, model: str = "claude-3-5-haiku-latest") -> None:
-        """Initialize or reinitialize the LLM with specified model."""
+    def _init_llm(self) -> None:
+        """Initialize the LLM client if not already initialized."""
         if not self.resume_text:
             raise ValueError("Resume text must be loaded before initializing LLM")
             
-        system_instructions = self._get_base_instructions()
-        
-        self.llm = FFAnthropicCached(config={
-            "model": model,
-            "system_instructions": system_instructions,
-            "temperature": 0.5,
-            "max_tokens": 4000
-        })
+        if self.llm is None:
+            system_instructions = self._get_base_instructions()
+            self.llm = FFAnthropicCached(config={
+                "system_instructions": system_instructions,
+                "temperature": 0.5,
+                "max_tokens": 4000
+            })
 
     def _prepare_single_rule_prompt(self, rule_name: str, rule: Dict[str, Any]) -> str:
         """Prepare evaluation prompt for a single rule."""
@@ -201,10 +200,13 @@ class ResumeEvaluator:
         Returns:
             Dict: Evaluation results for the rule
         """
-        model = self._get_model_for_rule(rule)
-        
+        if self.llm is None:
+            self._init_llm()
+            
         if self._should_clear_history(rule):
-            self._init_llm(model=model)
+            self.llm.clear_conversation()
+        
+        model = self._get_model_for_rule(rule)
         
         if use_steps:
             matching_step = next(
@@ -220,7 +222,7 @@ class ResumeEvaluator:
             prompt = self._prepare_single_rule_prompt(rule_name, rule)
             
         try:
-            response = self.llm.generate_response(prompt)
+            response = self.llm.generate_response(prompt, model=model)
             results = self._process_evaluation_response(response)
             
             stage = rule.get('Stage', 1)
@@ -342,43 +344,6 @@ class ResumeEvaluator:
         logger.debug(f"Evaluation results: {results}")
         return results
 
-    def evaluate_type(self, eval_type: str, stage: int) -> Dict:
-        """
-        Evaluate all rules of a specific type.
-        
-        Args:
-            eval_type (str): Type of evaluation to perform
-            stage (int): Evaluation stage number
-            
-        Returns:
-            Dict: Evaluation results for the specified type
-        """
-        logger.info(f"Starting evaluation for type: {eval_type}")
-        
-        if not self.resume_text:
-            raise ValueError("No resume has been loaded. Please load a resume first.")
-
-        type_rules = {
-            name: rule for name, rule in self.evaluation_rules.items()
-            if rule.get('Type') == eval_type and 
-            rule.get('Stage', 1) == stage
-        }
-        
-        sorted_rules = sorted(
-            type_rules.items(),
-            key=lambda x: int(x[1].get('Order', 1))
-        )
-        
-        results = {}
-        for rule_name, rule in sorted_rules:
-            try:
-                rule_result = self._evaluate_single_rule(rule_name, rule)
-                results.update(rule_result)
-            except Exception as e:
-                logger.error(f"Error during {eval_type} evaluation for {rule_name}: {str(e)}")
-                self._add_to_cannot_evaluate(rule_name, rule, str(e))
-
-        return results
     def get_overall_score(self) -> float:
         """
         Calculate the overall score based on weighted Core type evaluations.
@@ -424,7 +389,6 @@ class ResumeEvaluator:
         logger.debug(f"Calculated overall score: {final_score}")
         
         return final_score
-
 
     def get_combined_evaluation(self) -> Dict:
         """
