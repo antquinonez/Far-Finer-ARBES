@@ -31,6 +31,26 @@ class ResumeEvaluator:
     
     SUPPORTED_EXTENSIONS: Set[str] = {'.pdf', '.doc', '.docx', '.txt'}
     
+    def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
+        """
+        Initialize the resume evaluator with evaluation rules and steps.
+        
+        Args:
+            evaluation_rules_path (str): Path to evaluation rules JSON
+            evaluation_steps_path (str): Path to evaluation steps JSON
+            output_dir (str): Directory for evaluation results
+        """
+        self.evaluation_rules = self._load_json(evaluation_rules_path)
+        self.evaluation_steps = self._load_json(evaluation_steps_path)
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.document_index = None
+        self.resume_text = None
+        self.current_resume_path = None
+        self.stage_results = self._init_stage_results()
+        self.llm = None
+        
     def _load_json(self, file_path: str) -> Dict:
         """Load and parse a JSON file."""
         try:
@@ -48,15 +68,12 @@ class ResumeEvaluator:
             3: {}   # Stage 3 results
         }
 
-    def _get_base_instructions(self, include_resume: bool = False) -> str:
+    def _get_base_instructions(self) -> str:
         """
-        Get base system instructions with optional resume content.
+        Get base system instructions with resume content.
         
-        Args:
-            include_resume (bool): Whether to include resume text in instructions
-            
         Returns:
-            str: Base system instructions with evaluation rules
+            str: Base system instructions with evaluation rules and resume
         """
         base_instruction = next(
             (step_info.get('Instruction', '') 
@@ -79,7 +96,7 @@ class ResumeEvaluator:
             f"{rules_str}\n"
         )
         
-        if include_resume and self.resume_text:
+        if self.resume_text:
             system_instructions = (
                 f"{system_instructions}\n"
                 "==========\n"
@@ -87,6 +104,8 @@ class ResumeEvaluator:
                 "==========\n"
                 f"{self.resume_text}\n"
             )
+        else:
+            raise ValueError("Resume text must be loaded before getting system instructions")
             
         return system_instructions
 
@@ -115,90 +134,9 @@ class ResumeEvaluator:
         hist_handling = rule.get('Hist Handling', [])
         return 'pre_clear' in hist_handling
 
-    def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
-        """
-        Initialize the resume evaluator with evaluation rules and steps.
-        
-        Args:
-            evaluation_rules_path (str): Path to evaluation rules JSON
-            evaluation_steps_path (str): Path to evaluation steps JSON
-            output_dir (str): Directory for evaluation results
-        """
-        self.evaluation_rules = self._load_json(evaluation_rules_path)
-        self.evaluation_steps = self._load_json(evaluation_steps_path)
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        self.document_index = None
-        self.resume_text = None
-        self.current_resume_path = None
-        self.stage_results = self._init_stage_results()
-        self.llm = None  # Initialize as None, will be created per resume
-
-    def evaluate_directory(self, resume_dir: str) -> List[Dict]:
-        """
-        Evaluate all supported resume files in the specified directory.
-        
-        Args:
-            resume_dir (str): Directory containing resume files
-            
-        Returns:
-            List[Dict]: List of evaluation results for each resume
-        """
-        resume_dir_path = Path(resume_dir)
-        if not resume_dir_path.is_dir():
-            raise NotADirectoryError(f"{resume_dir} is not a directory")
-
-        results = []
-        
-        for file_path in resume_dir_path.iterdir():
-            if self._is_supported_file(file_path):
-                logger.info(f"Processing resume: {file_path}")
-                
-                self.stage_results = self._init_stage_results()
-                
-                if self.load_resume(str(file_path)):
-                    try:
-                        evaluation_result = self.evaluate_resume()
-                        results.append(evaluation_result)
-
-                        logger.debug(f"Evaluation results: {evaluation_result}")
-                        
-                        preferred_name = self._get_preferred_name()
-                        logger.debug(f"Preferred name: {preferred_name}")
-
-                        output_path = self.output_dir / f"{preferred_name}_evaluation.json"
-                        logger.info(f"Exporting results to {output_path}")
-
-                        self.export_results(str(output_path))
-                        
-                    except Exception as e:
-                        logger.error(f"Error evaluating resume {file_path}: {str(e)}")
-                        continue
-
-        logger.debug(f"Evaluation results: {results}")
-        return results
-
     def _is_supported_file(self, file_path: Path) -> bool:
         """Check if the file is a supported resume format."""
         return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
-
-    def _get_preferred_name(self) -> str:
-        """
-        Extract preferred name from evaluation results or generate a fallback name.
-        
-        Returns:
-            str: Preferred name from evaluation or formatted timestamp if not found
-        """
-        preferred_name = self.stage_results[1].get('preferred_name', {}).get('value')
-        
-        if not preferred_name:
-            preferred_name = Path(self.current_resume_path).stem
-            
-        safe_name = "".join(c for c in preferred_name if c.isalnum() or c in (' ', '-', '_')).strip()
-        safe_name = safe_name.replace(' ', '_')
-        
-        return safe_name
 
     def load_resume(self, resume_path: str) -> bool:
         """
@@ -213,6 +151,7 @@ class ResumeEvaluator:
             self.resume_text = "\n".join([doc.text for doc in documents])
             self.current_resume_path = resume_path
             
+            # Initialize LLM with resume in system instructions
             self._init_llm()
             
             logger.info(f"Successfully loaded and indexed resume from {resume_path}")
@@ -220,6 +159,35 @@ class ResumeEvaluator:
         except Exception as e:
             logger.error(f"Error loading resume {resume_path}: {str(e)}")
             return False
+
+    def _init_llm(self, model: str = "claude-3-5-haiku-latest") -> None:
+        """Initialize or reinitialize the LLM with specified model."""
+        if not self.resume_text:
+            raise ValueError("Resume text must be loaded before initializing LLM")
+            
+        system_instructions = self._get_base_instructions()
+        
+        self.llm = FFAnthropicCached(config={
+            "model": model,
+            "system_instructions": system_instructions,
+            "temperature": 0.5,
+            "max_tokens": 4000
+        })
+
+    def _prepare_single_rule_prompt(self, rule_name: str, rule: Dict[str, Any]) -> str:
+        """Prepare evaluation prompt for a single rule."""
+        prompt = (
+            f"Please evaluate the following attribute:\n\n"
+            f"Attribute Name: {rule_name}\n"
+            f"Description: {rule.get('Description', '')}\n"
+        )
+        
+        if rule.get('Specification'):
+            prompt += f"Specification: {rule['Specification']}\n"
+            
+        prompt += "\nPlease provide your evaluation in JSON format."
+        
+        return prompt
 
     def _evaluate_single_rule(self, rule_name: str, rule: Dict[str, Any], use_steps: bool = True) -> Dict:
         """
@@ -265,21 +233,6 @@ class ResumeEvaluator:
             self._add_to_cannot_evaluate(rule_name, rule, str(e))
             return {}
 
-    def _prepare_single_rule_prompt(self, rule_name: str, rule: Dict[str, Any]) -> str:
-        """Prepare evaluation prompt for a single rule."""
-        prompt = (
-            f"Please evaluate the following attribute for the resume:\n\n"
-            f"Attribute Name: {rule_name}\n"
-            f"Description: {rule.get('Description', '')}\n"
-        )
-        
-        if rule.get('Specification'):
-            prompt += f"Specification: {rule['Specification']}\n"
-            
-        prompt += "\nPlease provide your evaluation in JSON format."
-        
-        return prompt
-
     def _process_evaluation_response(self, response: str) -> Dict:
         """Process and validate the evaluation response."""
         try:
@@ -304,14 +257,22 @@ class ResumeEvaluator:
             
         self.stage_results[1]['_meta_cant_be_evaluated_df'].append(cannot_evaluate_item)
 
-    def _init_llm(self, model: str = "claude-3-5-haiku-latest") -> None:
-        """Initialize or reinitialize the LLM with specified model."""
-        self.llm = FFAnthropicCached(config={
-            "model": model,
-            "system_instructions": self._get_base_instructions(include_resume=True),
-            "temperature": 0.5,
-            "max_tokens": 4000
-        })
+    def _get_preferred_name(self) -> str:
+        """
+        Extract preferred name from evaluation results or generate a fallback name.
+        
+        Returns:
+            str: Preferred name from evaluation or formatted timestamp if not found
+        """
+        preferred_name = self.stage_results[1].get('preferred_name', {}).get('value')
+        
+        if not preferred_name:
+            preferred_name = Path(self.current_resume_path).stem
+            
+        safe_name = "".join(c for c in preferred_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        safe_name = safe_name.replace(' ', '_')
+        
+        return safe_name
 
     def evaluate_resume(self, use_steps: bool = True) -> Dict:
         """
@@ -337,9 +298,96 @@ class ResumeEvaluator:
 
         return self.get_combined_evaluation()
 
+    def evaluate_directory(self, resume_dir: str) -> List[Dict]:
+        """
+        Evaluate all supported resume files in the specified directory.
+        
+        Args:
+            resume_dir (str): Directory containing resume files
+            
+        Returns:
+            List[Dict]: List of evaluation results for each resume
+        """
+        resume_dir_path = Path(resume_dir)
+        if not resume_dir_path.is_dir():
+            raise NotADirectoryError(f"{resume_dir} is not a directory")
+
+        results = []
+        
+        for file_path in resume_dir_path.iterdir():
+            if self._is_supported_file(file_path):
+                logger.info(f"Processing resume: {file_path}")
+                
+                self.stage_results = self._init_stage_results()
+                
+                if self.load_resume(str(file_path)):
+                    try:
+                        evaluation_result = self.evaluate_resume()
+                        results.append(evaluation_result)
+
+                        logger.debug(f"Evaluation results: {evaluation_result}")
+                        
+                        preferred_name = self._get_preferred_name()
+                        logger.debug(f"Preferred name: {preferred_name}")
+
+                        output_path = self.output_dir / f"{preferred_name}_evaluation.json"
+                        logger.info(f"Exporting results to {output_path}")
+
+                        self.export_results(str(output_path))
+                        
+                    except Exception as e:
+                        logger.error(f"Error evaluating resume {file_path}: {str(e)}")
+                        continue
+
+        logger.debug(f"Evaluation results: {results}")
+        return results
+
+    def evaluate_type(self, eval_type: str, stage: int) -> Dict:
+        """
+        Evaluate all rules of a specific type.
+        
+        Args:
+            eval_type (str): Type of evaluation to perform
+            stage (int): Evaluation stage number
+            
+        Returns:
+            Dict: Evaluation results for the specified type
+        """
+        logger.info(f"Starting evaluation for type: {eval_type}")
+        
+        if not self.resume_text:
+            raise ValueError("No resume has been loaded. Please load a resume first.")
+
+        type_rules = {
+            name: rule for name, rule in self.evaluation_rules.items()
+            if rule.get('Type') == eval_type and 
+            rule.get('Stage', 1) == stage
+        }
+        
+        sorted_rules = sorted(
+            type_rules.items(),
+            key=lambda x: int(x[1].get('Order', 1))
+        )
+        
+        results = {}
+        for rule_name, rule in sorted_rules:
+            try:
+                rule_result = self._evaluate_single_rule(rule_name, rule)
+                results.update(rule_result)
+            except Exception as e:
+                logger.error(f"Error during {eval_type} evaluation for {rule_name}: {str(e)}")
+                self._add_to_cannot_evaluate(rule_name, rule, str(e))
+
+        return results
     def get_overall_score(self) -> float:
         """
         Calculate the overall score based on weighted Core type evaluations.
+        
+        Returns:
+            float: Weighted average score from Core type evaluations that contribute to overall rating
+            
+        Raises:
+            ValueError: If no evaluation results are available
         """
         logger.debug("Calculating overall score")
         
@@ -364,58 +412,66 @@ class ResumeEvaluator:
                     value = float(core_results[name].get('value', 0))
                     weighted_sum += weight * value
                     total_weight += weight
-                except (TypeError, ValueError):
-                    logger.warning(f"Skipping non-numeric value for {name}")
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Skipping non-numeric value for {name}: {str(e)}")
                     continue
 
-        return weighted_sum / total_weight if total_weight > 0 else 0
+        if total_weight <= 0:
+            logger.warning("No valid weighted scores found, returning 0")
+            return 0.0
+
+        final_score = weighted_sum / total_weight
+        logger.debug(f"Calculated overall score: {final_score}")
+        
+        return final_score
+
 
     def get_combined_evaluation(self) -> Dict:
-            """
-            Combine all stage results into a single evaluation result.
-            
-            Returns:
-                Dict: Combined evaluation results with metadata and summary
-            """
-            overall_score = self.get_overall_score()
-            
-            # Determine overall rating based on score
-            rating = None
-            if overall_score >= 9:
-                rating = "exceptional"
-            elif overall_score >= 8:
-                rating = "very high"
-            elif overall_score >= 7:
-                rating = "high"
-            elif overall_score >= 6:
-                rating = "average"
-            else:
-                rating = "poor"
+        """
+        Combine all stage results into a single evaluation result.
+        
+        Returns:
+            Dict: Combined evaluation results with metadata and summary
+        """
+        overall_score = self.get_overall_score()
+        
+        # Determine overall rating based on score
+        rating = None
+        if overall_score >= 9:
+            rating = "exceptional"
+        elif overall_score >= 8:
+            rating = "very high"
+        elif overall_score >= 7:
+            rating = "high"
+        elif overall_score >= 6:
+            rating = "average"
+        else:
+            rating = "poor"
 
-            combined_results = {
-                "metadata": {
-                    "evaluation_date": datetime.now().isoformat(),
-                    "evaluation_version": "1.0",
-                    "resume_file": str(self.current_resume_path)
-                },
-                "overall_evaluation": {
-                    "score": round(overall_score, 2),
-                    "rating": rating
-                },
-                "stage_1": self.stage_results[1],
-                "stage_2": self.stage_results[2],
-                "stage_3": self.stage_results[3],
-                "summary": {
-                    "evaluated_fields": len(self.stage_results[1]) + 
-                                    len(self.stage_results[2]) + 
-                                    len(self.stage_results[3]),
-                    "unable_to_evaluate": self.stage_results[1].get('_meta_cant_be_evaluated_df', [])
-                }
+        combined_results = {
+            "metadata": {
+                "evaluation_date": datetime.now().isoformat(),
+                "evaluation_version": "1.0",
+                "resume_file": str(self.current_resume_path)
+            },
+            "overall_evaluation": {
+                "score": round(overall_score, 2),
+                "rating": rating
+            },
+            "stage_1": self.stage_results[1],
+            "stage_2": self.stage_results[2],
+            "stage_3": self.stage_results[3],
+            "summary": {
+                "evaluated_fields": len(self.stage_results[1]) + 
+                                  len(self.stage_results[2]) + 
+                                  len(self.stage_results[3]),
+                "unable_to_evaluate": self.stage_results[1].get('_meta_cant_be_evaluated_df', [])
             }
+        }
 
-            # Transform data from stages and merge into a single data structure
-            transformer = ResumeSkillsTransformer(combined_results)
-            return transformer.create_integrated_json()
+        # Transform data from stages and merge into a single data structure
+        transformer = ResumeSkillsTransformer(combined_results)
+        return transformer.create_integrated_json()
 
     def export_results(self, output_path: str) -> None:
         """
@@ -456,46 +512,6 @@ class ResumeEvaluator:
         except Exception as e:
             logger.error(f"Error exporting results: {str(e)}")
             raise
-    
-    def evaluate_type(self, eval_type: str, stage: int) -> Dict:
-        """
-        Evaluate all rules of a specific type.
-        
-        Args:
-            eval_type (str): Type of evaluation to perform
-            stage (int): Evaluation stage number
-            
-        Returns:
-            Dict: Evaluation results for the specified type
-        """
-        logger.info(f"Starting evaluation for type: {eval_type}")
-        
-        if not self.resume_text:
-            raise ValueError("No resume has been loaded. Please load a resume first.")
-
-        # Get all rules of the specified type and stage
-        type_rules = {
-            name: rule for name, rule in self.evaluation_rules.items()
-            if rule.get('Type') == eval_type and 
-            rule.get('Stage', 1) == stage
-        }
-        
-        # Sort rules by order
-        sorted_rules = sorted(
-            type_rules.items(),
-            key=lambda x: int(x[1].get('Order', 1))
-        )
-        
-        results = {}
-        for rule_name, rule in sorted_rules:
-            try:
-                rule_result = self._evaluate_single_rule(rule_name, rule)
-                results.update(rule_result)
-            except Exception as e:
-                logger.error(f"Error during {eval_type} evaluation for {rule_name}: {str(e)}")
-                self._add_to_cannot_evaluate(rule_name, rule, str(e))
-
-        return results
 
     def _prepare_evaluation_prompt(self, eval_type: str) -> str:
         """
@@ -536,26 +552,42 @@ class ResumeEvaluator:
 
         return prompt
 
-    def evaluate_resume(self, use_steps: bool = True) -> Dict:
+    def evaluate_type(self, eval_type: str, stage: int) -> Dict:
         """
-        Perform full resume evaluation following the evaluation rules order.
+        Evaluate all rules of a specific type.
         
         Args:
-            use_steps (bool): Whether to use evaluation steps prompts
+            eval_type (str): Type of evaluation to perform
+            stage (int): Evaluation stage number
             
         Returns:
-            Dict: Combined evaluation results
+            Dict: Evaluation results for the specified type
         """
+        logger.info(f"Starting evaluation for type: {eval_type}")
+        
         if not self.resume_text:
             raise ValueError("No resume has been loaded. Please load a resume first.")
 
-        sorted_rules = self._sort_rules_by_stage_and_order()
+        # Get all rules of the specified type and stage
+        type_rules = {
+            name: rule for name, rule in self.evaluation_rules.items()
+            if rule.get('Type') == eval_type and 
+            rule.get('Stage', 1) == stage
+        }
         
+        # Sort rules by order
+        sorted_rules = sorted(
+            type_rules.items(),
+            key=lambda x: int(x[1].get('Order', 1))
+        )
+        
+        results = {}
         for rule_name, rule in sorted_rules:
             try:
-                self._evaluate_single_rule(rule_name, rule, use_steps)
+                rule_result = self._evaluate_single_rule(rule_name, rule)
+                results.update(rule_result)
             except Exception as e:
-                logger.error(f"Error in evaluating {rule_name}: {str(e)}")
+                logger.error(f"Error during {eval_type} evaluation for {rule_name}: {str(e)}")
                 self._add_to_cannot_evaluate(rule_name, rule, str(e))
 
-        return self.get_combined_evaluation()
+        return results
