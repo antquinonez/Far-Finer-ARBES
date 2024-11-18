@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any, Tuple
 import logging
 import os
 
-from .OrderedHistory import OrderedHistory
+from .OrderedPromptHistory import OrderedPromptHistory
 from .ConversationHistory import ConversationHistory
 from .PermanentHistory import PermanentHistory
 
@@ -49,7 +49,7 @@ class FFAnthropicCached:
         
         self.conversation_history = ConversationHistory()
         self.permanent_history = PermanentHistory()
-        self.ordered_history = OrderedHistory()
+        self.ordered_history = OrderedPromptHistory()
              
         self.client: Anthropic = self._initialize_client()
 
@@ -94,7 +94,7 @@ class FFAnthropicCached:
 
             self.conversation_history.add_turn_assistant(assistant_response)
             self.permanent_history.add_turn_assistant(assistant_response)
-            self.ordered_history.add_interaction(used_model, prompt, assistant_response, prompt_name=prompt_name)
+            self.ordered_history.add_interaction(used_model, prompt, assistant_response, prompt_name)
             
             logger.info("Response generated successfully")
             return assistant_response
@@ -110,45 +110,66 @@ class FFAnthropicCached:
             
             raise RuntimeError(f"Error generating response from Claude: {str(e)}")
 
-    # OrderedHistory interface methods
+    # OrderedPromptHistory interface methods
     def get_interaction_history(self) -> List[Dict[str, Any]]:
         """Get all interactions as a list of dictionaries"""
-        return self.ordered_history.to_dict_list()
+        interactions = self.ordered_history.get_all_interactions()
+        return [i.to_dict() for i in interactions]
     
     def get_last_n_interactions(self, n: int) -> List[Dict[str, Any]]:
         """Get the last n interactions as dictionaries"""
-        return [i.to_dict() for i in self.ordered_history.get_last_n_interactions(n)]
+        all_interactions = self.ordered_history.get_all_interactions()
+        return [i.to_dict() for i in all_interactions[-n:]]
     
     def get_interaction(self, sequence_number: int) -> Optional[Dict[str, Any]]:
-        """Get a specific interaction by sequence number"""
-        interaction = self.ordered_history.get_interaction_by_sequence(sequence_number)
+        """Get a specific interaction by prompt name and sequence"""
+        all_interactions = self.ordered_history.get_all_interactions()
+        interaction = next((i for i in all_interactions if i.sequence_number == sequence_number), None)
         return interaction.to_dict() if interaction else None
     
     def get_model_interactions(self, model: str) -> List[Dict[str, Any]]:
         """Get all interactions for a specific model"""
-        return [i.to_dict() for i in self.ordered_history.get_interactions_by_model(model)]
+        all_interactions = self.ordered_history.get_all_interactions()
+        return [i.to_dict() for i in all_interactions if i.model == model]
     
-    def get_interactions_between(self, start_time: float, end_time: Optional[float] = None) -> List[Dict[str, Any]]:
-        """Get interactions within a timeframe"""
-        return [i.to_dict() for i in self.ordered_history.get_interactions_in_timeframe(start_time, end_time)]
+    def get_interactions_by_prompt_name(self, prompt_name: str) -> List[Dict[str, Any]]:
+        """Get all interactions for a specific prompt name"""
+        return [i.to_dict() for i in self.ordered_history.get_interactions_by_prompt_name(prompt_name)]
     
     def get_latest_interaction(self) -> Optional[Dict[str, Any]]:
         """Get the most recent interaction"""
-        interaction = self.ordered_history.get_latest_interaction()
-        return interaction.to_dict() if interaction else None
+        all_interactions = self.ordered_history.get_all_interactions()
+        return all_interactions[-1].to_dict() if all_interactions else None
     
     def get_prompt_history(self) -> List[str]:
         """Get all prompts in order"""
-        return self.ordered_history.get_prompt_history()
+        return [i.prompt for i in self.ordered_history.get_all_interactions()]
     
     def get_response_history(self) -> List[str]:
         """Get all responses in order"""
-        return self.ordered_history.get_response_history()
+        return [i.response for i in self.ordered_history.get_all_interactions()]
     
     def get_model_usage_stats(self) -> Dict[str, int]:
         """Get statistics on model usage"""
-        return self.ordered_history.get_model_usage_stats()
+        usage_stats = {}
+        for interaction in self.ordered_history.get_all_interactions():
+            usage_stats[interaction.model] = usage_stats.get(interaction.model, 0) + 1
+        return usage_stats
+
+    def get_prompt_name_usage_stats(self) -> Dict[str, int]:
+        """Get statistics on prompt name usage"""
+        return self.ordered_history.get_prompt_name_usage_stats()
 
     def clear_conversation(self):
         logger.info("Clearing conversation history (permanent and ordered histories retained)")
         self.conversation_history = ConversationHistory()
+
+    def get_prompt_dict(self) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Get the complete history as an ordered dictionary keyed by prompts
+        Returns:
+            Dict[str, List[Dict[str, Any]]]: OrderedDict where:
+                - keys are prompt names (or prompts if no name was provided)
+                - values are lists of interaction dictionaries for that prompt
+        """
+        return self.ordered_history.to_dict()
