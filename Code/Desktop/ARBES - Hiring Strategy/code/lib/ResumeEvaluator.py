@@ -578,6 +578,36 @@ class ResumeEvaluator:
 
         logger.debug(f"Determined rating '{rating}' for score {overall_score}")
 
+        # Initialize content section by collecting all attributes from stages
+        content = {}
+        
+        # Get all unique attribute names from evaluation rules
+        attribute_names = {
+            name for name, rule in self.evaluation_rules.items()
+            if not name.startswith('_')  # Skip meta fields
+        }
+        
+        # Process each attribute from any stage
+        for attr_name in attribute_names:
+            # Look for the attribute in each stage
+            for stage in [1, 2, 3]:
+                if attr_name in self.stage_results[stage]:
+                    stage_value = self.stage_results[stage][attr_name]
+                    
+                    # Handle different data structures
+                    if isinstance(stage_value, dict) and "value" in stage_value:
+                        # Already has value wrapper
+                        content[attr_name] = stage_value
+                    elif isinstance(stage_value, list):
+                        # List needs value wrapper
+                        content[attr_name] = {"value": stage_value}
+                    else:
+                        # Other types just get copied
+                        content[attr_name] = stage_value
+                    
+                    logger.debug(f"Added {attr_name} from stage {stage} to content")
+                    break  # Use first occurrence if found in multiple stages
+
         combined_results = {
             "metadata": {
                 "evaluation_date": datetime.now().isoformat(),
@@ -588,7 +618,7 @@ class ResumeEvaluator:
                 "score": round(overall_score, 2),
                 "rating": rating
             },
-            "content": {}, # Initialize content section
+            "content": content,
             "stage_1": self.stage_results[1],
             "stage_2": self.stage_results[2],
             "stage_3": self.stage_results[3],
