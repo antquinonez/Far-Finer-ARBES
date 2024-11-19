@@ -65,8 +65,8 @@ class ResumeEvaluator:
             logger.error(f"Error loading JSON file {file_path}: {str(e)}")
             raise
 
-    def _init_stage_results(self) -> Dict:
-        """Initialize empty stage results structure."""
+    def _init_stage_results(self) -> Dict[int, Dict]:
+        """Initialize empty stage results structure with integer keys."""
         return {
             1: {},  # Stage 1 results
             2: {},  # Stage 2 results
@@ -110,7 +110,7 @@ class ResumeEvaluator:
         return system_instructions
 
     def _sort_rules_by_stage_and_order(self) -> List[Tuple[str, Dict]]:
-        """Sort evaluation rules by stage and order."""
+        """Sort evaluation rules by stage and order, handling string-to-int conversion."""
         rules_with_metadata = [
             (name, rule) for name, rule in self.evaluation_rules.items()
             if not name.startswith('_')  # Skip meta fields
@@ -119,8 +119,8 @@ class ResumeEvaluator:
         return sorted(
             rules_with_metadata,
             key=lambda x: (
-                int(x[1].get('Stage', 1)),
-                int(x[1].get('Order', 1))
+                int(x[1].get('Stage', '1')),  # Convert string stage to int
+                int(x[1].get('Order', '1'))    # Convert string order to int
             )
         )
 
@@ -175,6 +175,14 @@ class ResumeEvaluator:
                 "max_tokens": 4000
             })
 
+    def _get_rule_stage(self, rule: Dict) -> int:
+        """Helper method to consistently get stage as integer."""
+        try:
+            return int(rule.get('Stage', '1'))
+        except (TypeError, ValueError) as e:
+            logger.warning(f"Invalid stage value in rule, defaulting to 1: {str(e)}")
+            return 1
+
     def _group_rules_for_batching(self, rules: List[Tuple[str, Dict]]) -> List[List[Tuple[str, Dict]]]:
         """Group rules by model that can be batched together."""
         # First, filter for rules that can be batched (have pre_clear history handling)
@@ -183,44 +191,42 @@ class ResumeEvaluator:
             if "pre_clear" in rule.get('Hist Handling', [])
         ]
         
-        # Group by model
-        sorted_rules = sorted(batchable_rules, key=lambda x: x[1].get('Model', ['default'])[0])
+        # Group by model and stage
+        def get_group_key(rule_tuple):
+            return (
+                rule_tuple[1].get('Model', ['default'])[0],
+                self._get_rule_stage(rule_tuple[1])
+            )
+        
+        sorted_rules = sorted(batchable_rules, key=get_group_key)
         batches = []
         
-        for model, group in groupby(sorted_rules, key=lambda x: x[1].get('Model', ['default'])[0]):
+        # Group by both model and stage
+        for (model, stage), group in groupby(sorted_rules, key=get_group_key):
             group_list = list(group)
             
             # Split into batches of BATCH_SIZE
             for i in range(0, len(group_list), self.BATCH_SIZE):
                 batch = group_list[i:i + self.BATCH_SIZE]
                 batches.append(batch)
-                
+        
+        logger.debug(f"Created {len(batches)} batches from {len(rules)} rules")
         return batches
 
     def _evaluate_batch(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
-        """
-        Evaluate a batch of rules together.
-        
-        Args:
-            batch: List of (rule_name, rule_dict) tuples to evaluate
-            model: Model to use for evaluation
-            
-        Returns:
-            Dict: Evaluation results
-        """
+        """Evaluate a batch of rules together."""
         try:
             # Clear conversation history before batch
             self.llm.clear_conversation()
             
             combined_prompt = self._prepare_batch_prompt(batch)
             
-            # Add exponential backoff retries for 429 errors
             @backoff.on_exception(
                 backoff.expo,
                 Exception,
-                max_tries=5,
+                max_tries=3,
                 max_time=300,
-                giveup=lambda e: not str(e).startswith('429')  # Only retry on 429s
+                giveup=lambda e: not isinstance(e, Exception) or not str(e).startswith('429')
             )
             def execute_batch():
                 return self.llm.generate_response(
@@ -233,9 +239,21 @@ class ResumeEvaluator:
             
             # Update stage results
             for rule_name, rule in batch:
-                stage = rule.get('Stage', 1)
+                stage = self._get_rule_stage(rule)
+                logger.debug(f"Processing rule {rule_name} for stage {stage}")
+                
                 if rule_name in results:
+                    if stage not in self.stage_results:
+                        logger.error(f"Invalid stage {stage} for rule {rule_name}")
+                        self._add_to_cannot_evaluate(
+                            rule_name,
+                            rule,
+                            f"Invalid stage: {stage}"
+                        )
+                        continue
+                        
                     self.stage_results[stage][rule_name] = results[rule_name]
+                    logger.debug(f"Added result for {rule_name} to stage {stage}")
                 else:
                     logger.warning(f"No result found for {rule_name} in batch response")
                     self._add_to_cannot_evaluate(
@@ -250,9 +268,13 @@ class ResumeEvaluator:
             return results
             
         except Exception as e:
-            logger.error(f"Error evaluating batch: {str(e)}")
+            logger.error(f"Error evaluating batch: {str(e)}", exc_info=True)
             for rule_name, rule in batch:
-                self._add_to_cannot_evaluate(rule_name, rule, str(e))
+                self._add_to_cannot_evaluate(
+                    rule_name,
+                    rule,
+                    f"Batch evaluation failed: {str(e)}"
+                )
             raise
 
     def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> str:
@@ -334,10 +356,16 @@ class ResumeEvaluator:
         """Process and validate the evaluation response."""
         try:
             json_text = response[response.find('{'):response.rfind('}')+1]
-            logger.debug(f"Cleaned evaluation response: {json_text}")
-            return json.loads(json_text)
+            logger.debug(f"Processing evaluation response. Raw text length: {len(response)}")
+            logger.debug(f"Extracted JSON text: {json_text}")
+            
+            results = json.loads(json_text)
+            logger.debug(f"Parsed evaluation results: {json.dumps(results, indent=2)}")
+            
+            return results
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing evaluation response: {str(e)}")
+            logger.error(f"Problematic text: {json_text}")
             raise
 
     def _add_to_cannot_evaluate(self, rule_name: str, rule: Dict, reason: str) -> None:
@@ -349,10 +377,12 @@ class ResumeEvaluator:
             "reason": reason
         }
         
-        if '_meta_cant_be_evaluated_df' not in self.stage_results[1]:
-            self.stage_results[1]['_meta_cant_be_evaluated_df'] = []
+        stage = self._get_rule_stage(rule)
+        if '_meta_cant_be_evaluated_df' not in self.stage_results[stage]:
+            self.stage_results[stage]['_meta_cant_be_evaluated_df'] = []
             
-        self.stage_results[1]['_meta_cant_be_evaluated_df'].append(cannot_evaluate_item)
+        self.stage_results[stage]['_meta_cant_be_evaluated_df'].append(cannot_evaluate_item)
+        logger.debug(f"Added {rule_name} to cannot_evaluate list with reason: {reason}")
 
     def _get_preferred_name(self) -> str:
         """Extract preferred name from evaluation results or generate a fallback name."""
@@ -367,20 +397,15 @@ class ResumeEvaluator:
         return safe_name
 
     def evaluate_resume(self, use_steps: bool = True) -> Dict:
-        """
-        Perform full resume evaluation with batching.
+        """Perform full resume evaluation with batching."""
+        logger.info(f"Starting resume evaluation for {self.current_resume_path}")
         
-        Args:
-            use_steps: Whether to use evaluation steps prompts
-            
-        Returns:
-            Dict: Combined evaluation results
-        """
         if not self.resume_text:
             raise ValueError("No resume has been loaded. Please load a resume first.")
             
         # Clear any existing stage results
         self.stage_results = self._init_stage_results()
+        logger.debug("Initialized empty stage results")
         
         # Reset LLM conversation history
         if self.llm:
@@ -388,19 +413,24 @@ class ResumeEvaluator:
 
         try:
             sorted_rules = self._sort_rules_by_stage_and_order()
+            logger.debug(f"Sorted {len(sorted_rules)} rules for evaluation")
             
             # Process rules by stage to maintain evaluation order
             for stage in [1, 2, 3]:
                 stage_rules = [
                     (name, rule) for name, rule in sorted_rules
-                    if int(rule.get('Stage', 1)) == stage
+                    if self._get_rule_stage(rule) == stage
                 ]
                 
                 if not stage_rules:
+                    logger.debug(f"No rules found for stage {stage}")
                     continue
                     
+                logger.debug(f"Processing {len(stage_rules)} rules for stage {stage}")
+                
                 # Group rules that can be batched for this stage
                 batches = self._group_rules_for_batching(stage_rules)
+                logger.debug(f"Grouped rules into {len(batches)} batches")
                 
                 # Track which rules are included in batches
                 batched_rules = {
@@ -409,15 +439,17 @@ class ResumeEvaluator:
                     for rule_name, _ in batch
                 }
                 
-                # Reduce max workers to avoid overwhelming the API
+                # Process batches for this stage
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     futures = []
                     
-                    for batch in batches:
+                    for batch_idx, batch in enumerate(batches):
                         if not batch:
                             continue
                             
                         model = batch[0][1].get('Model', ['claude-3-5-haiku-latest'])[0]
+                        logger.debug(f"Submitting batch {batch_idx + 1}/{len(batches)} "
+                                f"with {len(batch)} rules using model {model}")
                         
                         futures.append(
                             executor.submit(
@@ -426,18 +458,22 @@ class ResumeEvaluator:
                                 model
                             )
                         )
-                    
-                    # Add delay between submitting batches
-                    time.sleep(2)
+                        
+                        # Add delay between submitting batches
+                        time.sleep(2)
                     
                     # Wait for all batch evaluations in this stage to complete
                     for future in as_completed(futures):
                         try:
-                            future.result()
+                            result = future.result()
+                            logger.debug(f"Batch evaluation completed with {len(result)} results")
+                            logger.debug(f"Stage {stage} results after batch: "
+                                    f"{json.dumps(self.stage_results[stage], indent=2)}")
                         except Exception as e:
-                            logger.error(f"Batch evaluation failed: {str(e)}")
+                            logger.error(f"Batch evaluation failed: {str(e)}", exc_info=True)
+                            continue
                 
-                # Process remaining rules for this stage individually
+                # Process remaining rules individually
                 remaining_rules = [
                     (name, rule) for name, rule in stage_rules
                     if name not in batched_rules
@@ -446,24 +482,37 @@ class ResumeEvaluator:
                 for rule_name, rule in remaining_rules:
                     try:
                         self._evaluate_single_rule(rule_name, rule, use_steps)
-                        # Add small delay between individual evaluations
+                        stage = self._get_rule_stage(rule)
+                        logger.debug(f"Stage {stage} results after individual evaluation: "
+                                f"{json.dumps(self.stage_results[stage], indent=2)}")
                         time.sleep(1)
                     except Exception as e:
-                        logger.error(f"Error in evaluating {rule_name}: {str(e)}")
-                        self._add_to_cannot_evaluate(rule_name, rule, str(e))
+                        logger.error(f"Error evaluating {rule_name}: {str(e)}", exc_info=True)
+                        self._add_to_cannot_evaluate(
+                            rule_name,
+                            rule,
+                            f"Individual evaluation failed: {str(e)}"
+                        )
+                        
+                # Add delay between stages
+                time.sleep(3)
 
+            logger.info("Resume evaluation completed, getting combined results")
             return self.get_combined_evaluation()
             
         except Exception as e:
-            logger.error(f"Error during resume evaluation: {str(e)}")
+            logger.error(f"Error during resume evaluation: {str(e)}", exc_info=True)
             raise
 
     def get_overall_score(self) -> float:
         """Calculate the overall score based on weighted Core type evaluations."""
-        logger.debug("Calculating overall score")
+        logger.debug("Starting overall score calculation")
         
         core_results = self.stage_results[1]
+        logger.debug(f"Stage 1 results: {json.dumps(core_results, indent=2)}")
+        
         if not core_results:
+            logger.warning("No stage 1 results available for scoring")
             raise ValueError("No evaluation results available")
 
         core_rules = {
@@ -472,6 +521,9 @@ class ResumeEvaluator:
             and rule.get('is_contribute_rating_overall') == 'True'
             and rule.get('value_type') in ('Integer', 'Decimal')
         }
+        
+        logger.debug(f"Found {len(core_rules)} core rules that contribute to overall score")
+        logger.debug(f"Core rules: {list(core_rules.keys())}")
 
         total_weight = 0
         weighted_sum = 0
@@ -483,9 +535,13 @@ class ResumeEvaluator:
                     value = float(core_results[name].get('value', 0))
                     weighted_sum += weight * value
                     total_weight += weight
+                    logger.debug(f"Rule {name}: weight={weight}, value={value}, " 
+                            f"weighted_sum={weighted_sum}, total_weight={total_weight}")
                 except (TypeError, ValueError) as e:
                     logger.warning(f"Skipping non-numeric value for {name}: {str(e)}")
                     continue
+            else:
+                logger.debug(f"Core rule {name} not found in results")
 
         if total_weight <= 0:
             logger.warning("No valid weighted scores found, returning 0")
@@ -498,7 +554,14 @@ class ResumeEvaluator:
 
     def get_combined_evaluation(self) -> Dict:
         """Combine all stage results into a single evaluation result."""
-        overall_score = self.get_overall_score()
+        logger.debug("Starting to combine evaluation results")
+        logger.debug(f"Stage results before combination: {json.dumps(self.stage_results, indent=2)}")
+        
+        try:
+            overall_score = self.get_overall_score()
+        except Exception as e:
+            logger.error(f"Error calculating overall score: {str(e)}", exc_info=True)
+            overall_score = 0
         
         # Determine overall rating based on score
         rating = None
@@ -513,6 +576,8 @@ class ResumeEvaluator:
         else:
             rating = "poor"
 
+        logger.debug(f"Determined rating '{rating}' for score {overall_score}")
+
         combined_results = {
             "metadata": {
                 "evaluation_date": datetime.now().isoformat(),
@@ -523,31 +588,33 @@ class ResumeEvaluator:
                 "score": round(overall_score, 2),
                 "rating": rating
             },
+            "content": {}, # Initialize content section
             "stage_1": self.stage_results[1],
             "stage_2": self.stage_results[2],
             "stage_3": self.stage_results[3],
             "summary": {
                 "evaluated_fields": len(self.stage_results[1]) + 
-                                  len(self.stage_results[2]) + 
-                                  len(self.stage_results[3]),
+                                len(self.stage_results[2]) + 
+                                len(self.stage_results[3]),
                 "unable_to_evaluate": self.stage_results[1].get('_meta_cant_be_evaluated_df', [])
             }
         }
+        
+        logger.debug(f"Initial combined results: {json.dumps(combined_results, indent=2)}")
 
-        # Transform data from stages and merge into a single data structure
-        transformer = ResumeSkillsTransformer(combined_results)
-        return transformer.create_integrated_json()
+        # Transform data from stages and merge into integrated structure
+        try:
+            logger.debug("Starting data transformation")
+            transformer = ResumeSkillsTransformer(combined_results)
+            integrated_results = transformer.create_integrated_json()
+            logger.debug(f"Transformed results: {json.dumps(integrated_results, indent=2)}")
+            return integrated_results
+        except Exception as e:
+            logger.error(f"Error during data transformation: {str(e)}", exc_info=True)
+            return combined_results
 
     def evaluate_directory(self, resume_dir: str) -> List[Dict]:
-        """
-        Evaluate all supported resume files in directory.
-        
-        Args:
-            resume_dir: Directory containing resumes to evaluate
-            
-        Returns:
-            List[Dict]: Evaluation results for each resume
-        """
+        """Evaluate all supported resume files in directory."""
         resume_dir_path = Path(resume_dir)
         if not resume_dir_path.is_dir():
             raise NotADirectoryError(f"{resume_dir} is not a directory")
@@ -576,6 +643,7 @@ class ResumeEvaluator:
                 
                 # Load and evaluate resume
                 if self.load_resume(str(file_path)):
+                    logger.debug("Resume loaded successfully")
                     evaluation_result = self.evaluate_resume()
                     results.append(evaluation_result)
                     
@@ -583,14 +651,15 @@ class ResumeEvaluator:
                     preferred_name = self._get_preferred_name()
                     output_path = self.output_dir / f"{preferred_name}_evaluation.json"
                     self.export_results(str(output_path))
+                    logger.debug(f"Results exported to {output_path}")
                     
-                    # Add delay between resumes to avoid rate limiting
+                    # Add delay between resumes
                     time.sleep(2)
                 else:
                     logger.error(f"Failed to load resume: {file_path}")
                     
             except Exception as e:
-                logger.error(f"Error processing resume {file_path}: {str(e)}")
+                logger.error(f"Error processing resume {file_path}: {str(e)}", exc_info=True)
                 continue
 
         logger.info(f"Successfully processed {len(results)} out of {len(resume_files)} resumes")
@@ -601,6 +670,8 @@ class ResumeEvaluator:
         try:
             # Export the evaluation results
             combined_results = self.get_combined_evaluation()
+            logger.debug(f"Exporting combined results: {json.dumps(combined_results, indent=2)}")
+            
             with open(output_path, 'w') as f:
                 json.dump(combined_results, f, indent=2)
             logger.info(f"Results exported to {output_path}")
@@ -626,9 +697,9 @@ class ResumeEvaluator:
                 # Move the file
                 shutil.move(str(resume_path), str(dest_path))
                 logger.info(f"Moved processed resume to {dest_path}")
-            
+                
         except Exception as e:
-            logger.error(f"Error exporting results: {str(e)}")
+            logger.error(f"Error exporting results: {str(e)}", exc_info=True)
             raise
 
     def _prepare_evaluation_prompt(self, eval_type: str) -> str:
