@@ -8,6 +8,10 @@ import logging
 import shutil
 from operator import itemgetter
 from dotenv import load_dotenv
+import time
+from itertools import groupby
+import backoff
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.readers import SimpleDirectoryReader
@@ -30,6 +34,7 @@ class ResumeEvaluator:
     """Class to evaluate resumes using Claude and specified evaluation rules."""
     
     SUPPORTED_EXTENSIONS: Set[str] = {'.pdf', '.doc', '.docx', '.txt'}
+    BATCH_SIZE = 4
     
     def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
         """
@@ -69,12 +74,7 @@ class ResumeEvaluator:
         }
 
     def _get_base_instructions(self) -> str:
-        """
-        Get base system instructions with resume content.
-        
-        Returns:
-            str: Base system instructions with evaluation rules and resume
-        """
+        """Get base system instructions with resume content."""
         base_instruction = next(
             (step_info.get('Instruction', '') 
              for step_name, step_info in self.evaluation_steps.items()
@@ -138,13 +138,14 @@ class ResumeEvaluator:
         """Check if the file is a supported resume format."""
         return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
 
+    @backoff.on_exception(
+        backoff.expo,
+        Exception,
+        max_tries=3,
+        max_time=300
+    )
     def load_resume(self, resume_path: str) -> bool:
-        """
-        Load and index a resume document.
-        
-        Returns:
-            bool: True if resume was loaded successfully, False otherwise
-        """
+        """Load and index a resume document."""
         try:
             documents = SimpleDirectoryReader(input_files=[resume_path]).load_data()
             self.document_index = VectorStoreIndex.from_documents(documents)
@@ -156,6 +157,7 @@ class ResumeEvaluator:
             
             logger.info(f"Successfully loaded and indexed resume from {resume_path}")
             return True
+            
         except Exception as e:
             logger.error(f"Error loading resume {resume_path}: {str(e)}")
             return False
@@ -173,6 +175,103 @@ class ResumeEvaluator:
                 "max_tokens": 4000
             })
 
+    def _group_rules_for_batching(self, rules: List[Tuple[str, Dict]]) -> List[List[Tuple[str, Dict]]]:
+        """Group rules by model that can be batched together."""
+        # First, filter for rules that can be batched (have pre_clear history handling)
+        batchable_rules = [
+            (name, rule) for name, rule in rules
+            if "pre_clear" in rule.get('Hist Handling', [])
+        ]
+        
+        # Group by model
+        sorted_rules = sorted(batchable_rules, key=lambda x: x[1].get('Model', ['default'])[0])
+        batches = []
+        
+        for model, group in groupby(sorted_rules, key=lambda x: x[1].get('Model', ['default'])[0]):
+            group_list = list(group)
+            
+            # Split into batches of BATCH_SIZE
+            for i in range(0, len(group_list), self.BATCH_SIZE):
+                batch = group_list[i:i + self.BATCH_SIZE]
+                batches.append(batch)
+                
+        return batches
+
+    def _evaluate_batch(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
+        """
+        Evaluate a batch of rules together.
+        
+        Args:
+            batch: List of (rule_name, rule_dict) tuples to evaluate
+            model: Model to use for evaluation
+            
+        Returns:
+            Dict: Evaluation results
+        """
+        try:
+            # Clear conversation history before batch
+            self.llm.clear_conversation()
+            
+            combined_prompt = self._prepare_batch_prompt(batch)
+            
+            # Add exponential backoff retries for 429 errors
+            @backoff.on_exception(
+                backoff.expo,
+                Exception,
+                max_tries=5,
+                max_time=300,
+                giveup=lambda e: not str(e).startswith('429')  # Only retry on 429s
+            )
+            def execute_batch():
+                return self.llm.generate_response(
+                    prompt=combined_prompt,
+                    model=model
+                )
+            
+            response = execute_batch()
+            results = self._process_evaluation_response(response)
+            
+            # Update stage results
+            for rule_name, rule in batch:
+                stage = rule.get('Stage', 1)
+                if rule_name in results:
+                    self.stage_results[stage][rule_name] = results[rule_name]
+                else:
+                    logger.warning(f"No result found for {rule_name} in batch response")
+                    self._add_to_cannot_evaluate(
+                        rule_name, 
+                        rule,
+                        "No result in batch response"
+                    )
+            
+            # Add sleep between batches to avoid rate limits        
+            time.sleep(5)
+                
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error evaluating batch: {str(e)}")
+            for rule_name, rule in batch:
+                self._add_to_cannot_evaluate(rule_name, rule, str(e))
+            raise
+
+    def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> str:
+        """Prepare a combined prompt for batch evaluation."""
+        prompt = "Please evaluate the following attributes together:\n\n"
+        
+        for rule_name, rule in batch:
+            prompt += (
+                f"Attribute Name: {rule_name}\n"
+                f"Description: {rule.get('Description', '')}\n"
+            )
+            if rule.get('Specification'):
+                prompt += f"Specification: {rule['Specification']}\n"
+            prompt += "\n"
+            
+        prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
+        
+        return prompt
+
     def _prepare_single_rule_prompt(self, rule_name: str, rule: Dict[str, Any]) -> str:
         """Prepare evaluation prompt for a single rule."""
         prompt = (
@@ -188,18 +287,14 @@ class ResumeEvaluator:
         
         return prompt
 
+    @backoff.on_exception(
+        backoff.expo,
+        Exception,
+        max_tries=5,
+        max_time=300
+    )
     def _evaluate_single_rule(self, rule_name: str, rule: Dict[str, Any], use_steps: bool = True) -> Dict:
-        """
-        Evaluate a single rule using appropriate model and history handling.
-        
-        Args:
-            rule_name (str): Name of the rule to evaluate
-            rule (Dict): Rule definition and criteria
-            use_steps (bool): Whether to use evaluation steps prompts
-            
-        Returns:
-            Dict: Evaluation results for the rule
-        """
+        """Evaluate a single rule with backoff retry logic."""
         if self.llm is None:
             self._init_llm()
             
@@ -233,7 +328,7 @@ class ResumeEvaluator:
         except Exception as e:
             logger.error(f"Error evaluating rule {rule_name}: {str(e)}")
             self._add_to_cannot_evaluate(rule_name, rule, str(e))
-            return {}
+            raise
 
     def _process_evaluation_response(self, response: str) -> Dict:
         """Process and validate the evaluation response."""
@@ -260,12 +355,7 @@ class ResumeEvaluator:
         self.stage_results[1]['_meta_cant_be_evaluated_df'].append(cannot_evaluate_item)
 
     def _get_preferred_name(self) -> str:
-        """
-        Extract preferred name from evaluation results or generate a fallback name.
-        
-        Returns:
-            str: Preferred name from evaluation or formatted timestamp if not found
-        """
+        """Extract preferred name from evaluation results or generate a fallback name."""
         preferred_name = self.stage_results[1].get('preferred_name', {}).get('value')
         
         if not preferred_name:
@@ -278,82 +368,98 @@ class ResumeEvaluator:
 
     def evaluate_resume(self, use_steps: bool = True) -> Dict:
         """
-        Perform full resume evaluation following the evaluation rules order.
+        Perform full resume evaluation with batching.
         
         Args:
-            use_steps (bool): Whether to use evaluation steps prompts
+            use_steps: Whether to use evaluation steps prompts
             
         Returns:
             Dict: Combined evaluation results
         """
         if not self.resume_text:
             raise ValueError("No resume has been loaded. Please load a resume first.")
-
-        sorted_rules = self._sort_rules_by_stage_and_order()
-        
-        for rule_name, rule in sorted_rules:
-            try:
-                self._evaluate_single_rule(rule_name, rule, use_steps)
-            except Exception as e:
-                logger.error(f"Error in evaluating {rule_name}: {str(e)}")
-                self._add_to_cannot_evaluate(rule_name, rule, str(e))
-
-        return self.get_combined_evaluation()
-
-    def evaluate_directory(self, resume_dir: str) -> List[Dict]:
-        """
-        Evaluate all supported resume files in the specified directory.
-        
-        Args:
-            resume_dir (str): Directory containing resume files
             
-        Returns:
-            List[Dict]: List of evaluation results for each resume
-        """
-        resume_dir_path = Path(resume_dir)
-        if not resume_dir_path.is_dir():
-            raise NotADirectoryError(f"{resume_dir} is not a directory")
-
-        results = []
+        # Clear any existing stage results
+        self.stage_results = self._init_stage_results()
         
-        for file_path in resume_dir_path.iterdir():
-            if self._is_supported_file(file_path):
-                logger.info(f"Processing resume: {file_path}")
+        # Reset LLM conversation history
+        if self.llm:
+            self.llm.clear_conversation()
+
+        try:
+            sorted_rules = self._sort_rules_by_stage_and_order()
+            
+            # Process rules by stage to maintain evaluation order
+            for stage in [1, 2, 3]:
+                stage_rules = [
+                    (name, rule) for name, rule in sorted_rules
+                    if int(rule.get('Stage', 1)) == stage
+                ]
                 
-                self.stage_results = self._init_stage_results()
+                if not stage_rules:
+                    continue
+                    
+                # Group rules that can be batched for this stage
+                batches = self._group_rules_for_batching(stage_rules)
                 
-                if self.load_resume(str(file_path)):
+                # Track which rules are included in batches
+                batched_rules = {
+                    rule_name 
+                    for batch in batches 
+                    for rule_name, _ in batch
+                }
+                
+                # Reduce max workers to avoid overwhelming the API
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    futures = []
+                    
+                    for batch in batches:
+                        if not batch:
+                            continue
+                            
+                        model = batch[0][1].get('Model', ['claude-3-5-haiku-latest'])[0]
+                        
+                        futures.append(
+                            executor.submit(
+                                self._evaluate_batch,
+                                batch,
+                                model
+                            )
+                        )
+                    
+                    # Add delay between submitting batches
+                    time.sleep(2)
+                    
+                    # Wait for all batch evaluations in this stage to complete
+                    for future in as_completed(futures):
+                        try:
+                            future.result()
+                        except Exception as e:
+                            logger.error(f"Batch evaluation failed: {str(e)}")
+                
+                # Process remaining rules for this stage individually
+                remaining_rules = [
+                    (name, rule) for name, rule in stage_rules
+                    if name not in batched_rules
+                ]
+                
+                for rule_name, rule in remaining_rules:
                     try:
-                        evaluation_result = self.evaluate_resume()
-                        results.append(evaluation_result)
-
-                        logger.debug(f"Evaluation results: {evaluation_result}")
-                        
-                        preferred_name = self._get_preferred_name()
-                        logger.debug(f"Preferred name: {preferred_name}")
-
-                        output_path = self.output_dir / f"{preferred_name}_evaluation.json"
-                        logger.info(f"Exporting results to {output_path}")
-
-                        self.export_results(str(output_path))
-                        
+                        self._evaluate_single_rule(rule_name, rule, use_steps)
+                        # Add small delay between individual evaluations
+                        time.sleep(1)
                     except Exception as e:
-                        logger.error(f"Error evaluating resume {file_path}: {str(e)}")
-                        continue
+                        logger.error(f"Error in evaluating {rule_name}: {str(e)}")
+                        self._add_to_cannot_evaluate(rule_name, rule, str(e))
 
-        logger.debug(f"Evaluation results: {results}")
-        return results
+            return self.get_combined_evaluation()
+            
+        except Exception as e:
+            logger.error(f"Error during resume evaluation: {str(e)}")
+            raise
 
     def get_overall_score(self) -> float:
-        """
-        Calculate the overall score based on weighted Core type evaluations.
-        
-        Returns:
-            float: Weighted average score from Core type evaluations that contribute to overall rating
-            
-        Raises:
-            ValueError: If no evaluation results are available
-        """
+        """Calculate the overall score based on weighted Core type evaluations."""
         logger.debug("Calculating overall score")
         
         core_results = self.stage_results[1]
@@ -391,12 +497,7 @@ class ResumeEvaluator:
         return final_score
 
     def get_combined_evaluation(self) -> Dict:
-        """
-        Combine all stage results into a single evaluation result.
-        
-        Returns:
-            Dict: Combined evaluation results with metadata and summary
-        """
+        """Combine all stage results into a single evaluation result."""
         overall_score = self.get_overall_score()
         
         # Determine overall rating based on score
@@ -437,13 +538,66 @@ class ResumeEvaluator:
         transformer = ResumeSkillsTransformer(combined_results)
         return transformer.create_integrated_json()
 
-    def export_results(self, output_path: str) -> None:
+    def evaluate_directory(self, resume_dir: str) -> List[Dict]:
         """
-        Export the combined evaluation results to a JSON file and move the processed resume.
+        Evaluate all supported resume files in directory.
         
         Args:
-            output_path (str): Path to save the evaluation results
+            resume_dir: Directory containing resumes to evaluate
+            
+        Returns:
+            List[Dict]: Evaluation results for each resume
         """
+        resume_dir_path = Path(resume_dir)
+        if not resume_dir_path.is_dir():
+            raise NotADirectoryError(f"{resume_dir} is not a directory")
+
+        results = []
+        
+        # Get list of supported files first
+        resume_files = [
+            f for f in resume_dir_path.iterdir()
+            if self._is_supported_file(f)
+        ]
+        
+        logger.info(f"Found {len(resume_files)} supported resume files to process")
+        
+        for file_path in resume_files:
+            logger.info(f"Processing resume: {file_path}")
+            
+            try:
+                # Reset state for new resume
+                self.resume_text = None
+                self.current_resume_path = None
+                self.stage_results = self._init_stage_results()
+                
+                if self.llm:
+                    self.llm.clear_conversation()
+                
+                # Load and evaluate resume
+                if self.load_resume(str(file_path)):
+                    evaluation_result = self.evaluate_resume()
+                    results.append(evaluation_result)
+                    
+                    # Export results
+                    preferred_name = self._get_preferred_name()
+                    output_path = self.output_dir / f"{preferred_name}_evaluation.json"
+                    self.export_results(str(output_path))
+                    
+                    # Add delay between resumes to avoid rate limiting
+                    time.sleep(2)
+                else:
+                    logger.error(f"Failed to load resume: {file_path}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing resume {file_path}: {str(e)}")
+                continue
+
+        logger.info(f"Successfully processed {len(results)} out of {len(resume_files)} resumes")
+        return results
+
+    def export_results(self, output_path: str) -> None:
+        """Export the combined evaluation results and move processed resume."""
         try:
             # Export the evaluation results
             combined_results = self.get_combined_evaluation()
@@ -478,15 +632,7 @@ class ResumeEvaluator:
             raise
 
     def _prepare_evaluation_prompt(self, eval_type: str) -> str:
-        """
-        Prepare the evaluation prompt for a specific type.
-        
-        Args:
-            eval_type (str): Type of evaluation to prepare prompt for
-            
-        Returns:
-            str: Formatted prompt including evaluation rules
-        """
+        """Prepare the evaluation prompt for a specific type."""
         rules = {
             name: rule for name, rule in self.evaluation_rules.items()
             if rule.get('Type') == eval_type
@@ -517,16 +663,7 @@ class ResumeEvaluator:
         return prompt
 
     def evaluate_type(self, eval_type: str, stage: int) -> Dict:
-        """
-        Evaluate all rules of a specific type.
-        
-        Args:
-            eval_type (str): Type of evaluation to perform
-            stage (int): Evaluation stage number
-            
-        Returns:
-            Dict: Evaluation results for the specified type
-        """
+        """Evaluate all rules of a specific type."""
         logger.info(f"Starting evaluation for type: {eval_type}")
         
         if not self.resume_text:
@@ -555,3 +692,24 @@ class ResumeEvaluator:
                 self._add_to_cannot_evaluate(rule_name, rule, str(e))
 
         return results
+
+# def main():
+#     """Main function to run the resume evaluation."""
+#     # Configure logging
+#     logging.basicConfig(level=logging.INFO)
+    
+#     # Initialize evaluator
+#     evaluator = ResumeEvaluator(
+#         evaluation_rules_path="candidate_evaluation_rules.json",
+#         evaluation_steps_path="candidate_evaluation_steps.json",
+#         output_dir="evaluation_results"
+#     )
+    
+#     # Process resumes
+#     results = evaluator.evaluate_directory("resumes")
+    
+#     print(f"Processed {len(results)} resumes")
+#     return results
+
+# if __name__ == "__main__":
+#     results = main()
