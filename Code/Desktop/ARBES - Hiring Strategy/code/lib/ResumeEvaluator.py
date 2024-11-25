@@ -237,6 +237,21 @@ class ResumeEvaluator:
             response = execute_batch()
             results = self._process_evaluation_response(response)
             
+            # Validate results structure
+            for rule_name, rule in batch:
+                if rule_name in results:
+                    result = results[rule_name]
+                    if not isinstance(result, dict) or 'type' not in result:
+                        logger.warning(f"Result for {rule_name} missing standard structure")
+                        results[rule_name] = {
+                            "type": rule.get('Type', 'Core'),
+                            "sub_type": rule.get('Sub_Type', 'None'),
+                            "value": result,
+                            "eval": f"Evaluated from {rule_name}",
+                            "source": ["resume"],
+                            "source_detail": ["Document content"]
+                        }
+            
             # Update stage results
             for rule_name, rule in batch:
                 stage = self._get_rule_stage(rule)
@@ -266,7 +281,7 @@ class ResumeEvaluator:
             time.sleep(5)
                 
             return results
-            
+        
         except Exception as e:
             logger.error(f"Error evaluating batch: {str(e)}", exc_info=True)
             for rule_name, rule in batch:
@@ -360,9 +375,35 @@ class ResumeEvaluator:
             logger.debug(f"Extracted JSON text: {json_text}")
             
             results = json.loads(json_text)
+            
+            # Add standard structure to any results that are missing it
+            for field_name, field_value in results.items():
+                rule = self.evaluation_rules.get(field_name, {})
+                
+                # If the result is just a value without the standard structure
+                if not isinstance(field_value, dict) or not all(key in field_value for key in ['type', 'value']):
+                    structured_value = {
+                        "type": rule.get('Type', 'Core'),
+                        "sub_type": rule.get('Sub_Type', 'None'),
+                        "value": field_value,
+                        "eval": f"Evaluated from {field_name}",
+                        "source": ["resume"],
+                        "source_detail": ["Document content"]
+                    }
+                    
+                    # Add weight if it exists in rules
+                    if 'Weight' in rule and rule['Weight'] != 'Not Applicable':
+                        try:
+                            structured_value["weight"] = float(rule['Weight'])
+                        except (ValueError, TypeError):
+                            pass
+                            
+                    results[field_name] = structured_value
+            
             logger.debug(f"Parsed evaluation results: {json.dumps(results, indent=2)}")
             
             return results
+            
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing evaluation response: {str(e)}")
             logger.error(f"Problematic text: {json_text}")
