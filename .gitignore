@@ -9,3 +9,7 @@
 **/test*.py
 **/Test*.ipynb
 **/ce.py
+**/*_Resume_evaluation*
+**/evaluation_results/*
+**/resumes_old/processed/**
+**/resumes_old/to_proc/*
