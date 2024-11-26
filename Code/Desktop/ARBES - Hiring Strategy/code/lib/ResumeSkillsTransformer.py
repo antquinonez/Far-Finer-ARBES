@@ -53,7 +53,13 @@ class ResumeSkillsTransformer:
     def transform_generic_skills(self) -> None:
         """Transform skills_generic_df data into standardized format."""
         stage_data = self.get_stage_data()
+        
         generic_skills = stage_data.get("skills_generic_df", {}).get("value", [])
+
+        # process foundational technology skills as additional generic_skills
+        foundational_skills = stage_data.get("skills_technology_foundational_df", {}).get("value", [])
+        generic_skills.extend(foundational_skills)
+        
         logger.debug(f"Processing {len(generic_skills)} generic skills")
         logger.debug(f"Raw generic skills: {json.dumps(generic_skills, indent=2)}")
         
