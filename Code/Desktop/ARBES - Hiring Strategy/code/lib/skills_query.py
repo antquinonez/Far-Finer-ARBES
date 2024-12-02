@@ -1,3 +1,10 @@
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+from dotenv import load_dotenv
+import chromadb
+import json
+import os
+import pandas as pd
+
 def create_skills_matrix_with_distances(skills_dict):
     """
     Create a DataFrame showing the best (smallest) distance scores between entities and skills 
