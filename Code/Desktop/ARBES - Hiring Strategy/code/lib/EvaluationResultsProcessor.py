@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Set, Dict, Any
+from typing import Set, Dict, Any, List, Optional
 from pathlib import Path
 from EntitySkillsProcessor import EntitySkillsProcessor
 
@@ -13,7 +13,9 @@ class EvaluationResultsProcessor:
     def __init__(self, 
                 results_dir: str = "../evaluation_results",
                 db_dir: str = "../entity_skills_db",
-                processed_log: str = "../processed_entities.txt"):
+                processed_log: str = "../processed_entities.txt",
+                force_reset: bool = False,
+                delete_entity_names: Optional[List[str]] = None):
         """
         Initialize the evaluation results processor
         
@@ -21,16 +23,84 @@ class EvaluationResultsProcessor:
             results_dir: Directory containing evaluation result JSON files
             db_dir: Directory for ChromaDB persistence
             processed_log: File to track processed entity IDs
+            force_reset: If True, forces a reset of the entire collection
+            delete_entity_names: List of entity names to delete (can be entity_id, uuid, or preferred_name)
         """
         self.results_dir = Path(results_dir)
         self.processed_log = Path(processed_log)
+        
+        # If force_reset, clear the processed log
+        if force_reset and self.processed_log.exists():
+            self.processed_log.unlink()
+            
         self.processed_entities: Set[str] = self._load_processed_entities()
+        
+        # Resolve any provided entity names to their canonical forms
+        resolved_delete_names = None
+        if delete_entity_names:
+            resolved_delete_names = self._resolve_entity_names(delete_entity_names)
         
         # Initialize the EntitySkillsProcessor
         self.skills_processor = EntitySkillsProcessor(
             persist_dir=db_dir,
-            force_reset=False
+            force_reset=force_reset,
+            delete_entity_names=resolved_delete_names
         )
+
+    def _resolve_entity_names(self, entity_names: List[str]) -> List[str]:
+        """
+        Resolve provided entity names to their canonical forms by checking evaluation files
+        
+        Args:
+            entity_names: List of entity names to resolve (could be entity_id, uuid, or preferred_name)
+            
+        Returns:
+            List of resolved canonical entity names
+        """
+        resolved_names = set()
+        name_mapping = {}
+        
+        # First, build a mapping of all possible identifiers to canonical names
+        for file_path in self.results_dir.glob("*.json"):
+            try:
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                content = data.get('content', {})
+                
+                # Get all possible identifiers
+                identifiers = {
+                    content.get('entity_id', {}).get('value', ''),
+                    content.get('uuid', {}).get('value', ''),
+                    content.get('preferred_name', {}).get('value', '')
+                }
+                
+                # Remove empty strings
+                identifiers.discard('')
+                
+                if identifiers:
+                    # Use entity_id as canonical if available, else uuid, else preferred_name
+                    canonical = (content.get('entity_id', {}).get('value') or 
+                               content.get('uuid', {}).get('value') or 
+                               content.get('preferred_name', {}).get('value'))
+                    
+                    # Map all identifiers to the canonical form
+                    for identifier in identifiers:
+                        name_mapping[identifier] = canonical
+                        
+            except Exception as e:
+                logger.error(f"Error processing file {file_path} during name resolution: {e}")
+                continue
+        
+        # Now resolve each provided name
+        for name in entity_names:
+            if name in name_mapping:
+                resolved_names.add(name_mapping[name])
+            else:
+                logger.warning(f"Could not resolve entity name: {name}")
+                # Include the original name as fallback
+                resolved_names.add(name)
+                
+        return list(resolved_names)
 
     def _load_processed_entities(self) -> Set[str]:
         """Load the set of already processed entity IDs"""
@@ -46,6 +116,36 @@ class EvaluationResultsProcessor:
             f.write(f"{entity_id}\n")
         self.processed_entities.add(entity_id)
 
+    def _get_entity_identifier(self, data: Dict[str, Any]) -> str:
+        """
+        Get entity identifier with fallback options
+        
+        Args:
+            data: Parsed evaluation result JSON
+        
+        Returns:
+            Entity identifier string
+        """
+        content = data.get('content', {})
+        
+        # Try entity_id first
+        entity_id = content.get('entity_id', {}).get('value')
+        if entity_id:
+            return entity_id
+            
+        # Try uuid next
+        uuid = content.get('uuid', {}).get('value')
+        if uuid:
+            return uuid
+            
+        # Finally, try preferred_name
+        preferred_name = content.get('preferred_name', {}).get('value')
+        if preferred_name:
+            return preferred_name
+            
+        # If none found, raise exception
+        raise ValueError("No valid entity identifier found in evaluation data")
+
     def _extract_skills_from_evaluation(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract skills data from evaluation result JSON into required format
@@ -56,7 +156,7 @@ class EvaluationResultsProcessor:
         Returns:
             Dict containing entity name and skills in required format
         """
-        entity_id = data.get('content', {}).get('entity_id', {}).get('value', 'Unknown')
+        entity_name = self._get_entity_identifier(data)
         skills_df = data.get('content', {}).get('skills_df', {}).get('value', [])
         
         # Transform skills data into required format
@@ -86,7 +186,7 @@ class EvaluationResultsProcessor:
             formatted_skills.append(skill_data)
             
         return {
-            "entity_name": entity_id,
+            "entity_name": entity_name,
             "skills_df": {
                 "value": formatted_skills
             }
@@ -104,10 +204,11 @@ class EvaluationResultsProcessor:
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
-                # Extract entity ID
-                entity_id = data.get('content', {}).get('entity_id', {}).get('value')
-                if not entity_id:
-                    logger.warning(f"No entity ID found in file: {file_path}")
+                # Get entity identifier using fallback logic
+                try:
+                    entity_id = self._get_entity_identifier(data)
+                except ValueError as e:
+                    logger.error(f"Error processing file {file_path}: {e}")
                     continue
                     
                 # Skip if already processed
@@ -130,6 +231,9 @@ class EvaluationResultsProcessor:
                 continue
 
 # if __name__ == "__main__":
-#     # Initialize and run processor
-#     processor = EvaluationResultsProcessor()
+#     # Example usage with options
+#     processor = EvaluationResultsProcessor(
+#         force_reset=False,
+#         delete_entity_names=["Someone]"]
+#     )
 #     processor.process_files()
