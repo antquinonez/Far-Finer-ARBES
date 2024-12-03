@@ -5,6 +5,9 @@ import json
 import os
 import pandas as pd
 
+distance_threshold = .6
+
+
 def create_skills_matrix_with_distances(skills_dict):
     """
     Create a DataFrame showing the best (smallest) distance scores between entities and skills 
@@ -156,7 +159,7 @@ def calculate_scores(df):
     
     return result_df
 
-def create_skills_matrix(skills_dict, distance_threshold=.8):
+def create_skills_matrix(skills_dict, distance_threshold=distance_threshold):
     """
     Create a DataFrame showing which entities possess which skills based on ChromaDB similarity search.
     Skills are categorized by priority level and reflected in column names.
@@ -308,7 +311,7 @@ def summarize_create_skills_matrix(df):
 
 
 
-def create_skills_skill_matrix(skills_dict, distance_threshold=.8):
+def create_skills_skill_matrix(skills_dict, distance_threshold=distance_threshold):
     """
     Create a DataFrame showing which entities possess which skills based on ChromaDB similarity search.
     Returns the actual matching skill text from the database instead of boolean values.
