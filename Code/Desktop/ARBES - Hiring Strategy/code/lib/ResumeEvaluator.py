@@ -85,23 +85,21 @@ class ResumeEvaluator:
         
         if not base_instruction:
             raise ValueError("System instructions not found in evaluation steps")
-            
-        rules_str = json.dumps(self.evaluation_rules, indent=2)
         
         system_instructions = (
+            "=============================\n"
+            "BASE SYSTEM INSTRUCTIONS\n"
+            "=============================\n"
             f"{base_instruction}\n"
-            "=============\n"
-            "CANDIDATE EVALUATION CRITERIA\n"
-            "==========\n"
-            f"{rules_str}\n"
+            "=============================\n"
         )
-        
+
         if self.resume_text:
             system_instructions = (
                 f"{system_instructions}\n"
-                "==========\n"
+                "==================================================\n"
                 "RESUME TEXT\n"
-                "==========\n"
+                "==================================================\n"
                 f"{self.resume_text}\n"
             )
         else:
@@ -652,8 +650,7 @@ class ResumeEvaluator:
         combined_results = {
             "metadata": {
                 "evaluation_date": datetime.now().isoformat(),
-                "evaluation_version": "1.0",
-                "resume_file": str(self.current_resume_path)
+                "source_file": str(self.current_resume_path)
             },
             "overall_evaluation": {
                 "score": round(overall_score, 2),
