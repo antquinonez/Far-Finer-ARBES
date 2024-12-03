@@ -2,6 +2,8 @@ import json
 from typing import Dict, List, Any
 from copy import deepcopy
 import logging
+import time as time
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -214,6 +216,32 @@ class ResumeSkillsTransformer:
                 logger.error(f"Error processing non-technical skill {skill_entry}: {str(e)}", 
                             exc_info=True)
 
+
+    def transform_eligible_roles(self) -> None:
+        """Transform skills_non_technical_df data into standardized format."""
+        stage_data = self.get_stage_data()
+        roles = stage_data.get("eligible_roles_df", {}).get("value", [])
+        logger.debug(f"Processing {len(roles)} eligible roles")
+        logger.debug(f"Raw eligible roles: {json.dumps(roles, indent=2)}")
+        
+        for role in roles:
+            logger.debug(f"roles: {roles}")
+            # time.sleep(10)
+
+            try:
+                self.add_skill({
+                    "skill": role["role"],
+                    "type": "eligible role",
+                    # "source": roles.get("source", ""),
+                    # "source_detail": roles.get("source_detail", []),
+                    "score": 10
+                })
+
+                # time.sleep(10)
+            except Exception as e:
+                logger.error(f"Error processing eligible_roles_df role {role}: {str(e)}", 
+                            exc_info=True)
+
     def create_integrated_json(self) -> Dict[str, Any]:
         """Create the final integrated JSON with all transformations."""
         logger.info("Starting skills transformation and integration")
@@ -223,6 +251,9 @@ class ResumeSkillsTransformer:
             logger.debug(f"skills_df: {json.dumps(self.skills_df, indent=2)}")
             
             # Perform all skills transformations
+            logger.debug("Starting eligible roles transformation")
+            self.transform_eligible_roles()
+            
             logger.debug("Starting non-technical skills transformation")
             self.transform_non_technical_skills()
             
