@@ -3,9 +3,9 @@ from datetime import datetime
 import logging
 from copy import deepcopy
 
-from OrderedPromptHistory import OrderedPromptHistory
-from PermanentHistory import PermanentHistory
-from FFAzureOpenAI import FFAzureOpenAI
+from .OrderedPromptHistory import OrderedPromptHistory
+from .PermanentHistory import PermanentHistory
+from .FFAzureOpenAI import FFAzureOpenAI
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -17,20 +17,23 @@ class FFAIAzure:
         self.permanent_history = PermanentHistory()
         self.ordered_history = OrderedPromptHistory()
         
-    def generate_response(self, prompt: str, prompt_name: Optional[str] = None) -> str:
+    def generate_response(self, prompt: str, model: Optional[str] = None, prompt_name: Optional[str] = None) -> str:
         logger.debug(f"Generating response for prompt: {prompt}")
-        
+        used_model = model if model else self.client.model
+        logger.debug(f"Using model: {used_model}")
+
         try:
             # Add to permanent history
             self.permanent_history.add_turn_user(prompt)
             
             # Generate response using the wrapped client
-            response = self.client.generate_response(prompt)
+            response = self.client.generate_response(prompt=prompt, model=used_model)
             
             # Add response to histories
             self.permanent_history.add_turn_assistant(response)
+
             self.ordered_history.add_interaction(
-                model=self.client.model,
+                model=used_model,
                 prompt=prompt,
                 response=response,
                 prompt_name=prompt_name
