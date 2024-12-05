@@ -5,7 +5,7 @@ import os
 import time
 import logging
 from typing import Optional
-
+# from openai import OpenAI
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 
@@ -65,7 +65,6 @@ class FFAzureOpenAI:
         
         azure_endpoint =  os.getenv('AZUREOPENAI_BASE')
         api_version = os.getenv('AZURE_API_VERSION') or '2024-08-01-preview'
-        
         return AzureOpenAI( api_key=api_key, 
                             azure_endpoint=azure_endpoint,
                             api_version = api_version
