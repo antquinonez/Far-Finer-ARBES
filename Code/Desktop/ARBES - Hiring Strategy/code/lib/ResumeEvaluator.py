@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Set, Tuple
 from datetime import datetime
+from datetime import date
 import sys
 import os
 import json
@@ -23,15 +24,60 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..', '..')))
 
-from lib.AI.FFAnthropicCached import FFAnthropicCached
+# ==============================================================
+# CONSTANTS
+# ==============================================================
+# DEFAULT_MODEL='claude-3-5-sonnet-latest'
+DEFAULT_MODEL='gpt-4o'
 
+
+
+# ==============================================================
+# USE CACHED CLAUDE
+# ==============================================================
+
+# from lib.AI.FFAnthropicCached import FFAnthropicCached
+
+# def _get_ai(system_instructions: str = None):
+#     ai = FFAnthropicCached(config={
+#                     "system_instructions": system_instructions,
+#                     "temperature": 0.5,
+#                     "max_tokens": 4000
+#                 }
+#     )
+#
+#
+#     return ai
+# ==============================================================
+
+# ==============================================================
+# USE AZURE OPENAI
+# ==============================================================
+from lib.AI.FFAIAzure import FFAIAzure as AI
+from lib.AI.FFAzureOpenAI import FFAzureOpenAI
+
+
+def _get_ai(system_instructions: str = None):
+    azure_client = FFAzureOpenAI(config={
+                    "system_instructions": system_instructions,
+                    "temperature": 0.2,
+                    "max_tokens": 7000
+                }
+    )
+
+    # Create the wrapper
+    ai = AI(azure_client)
+
+    return ai
+
+# ===============================================================
 load_dotenv()
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 class ResumeEvaluator:
-    """Class to evaluate resumes using Claude and specified evaluation rules."""
+    """Class to evaluate resumes using specified evaluation rules."""
     
     SUPPORTED_EXTENSIONS: Set[str] = {'.pdf', '.doc', '.docx', '.txt'}
     BATCH_SIZE = 4
@@ -86,8 +132,12 @@ class ResumeEvaluator:
         if not base_instruction:
             raise ValueError("System instructions not found in evaluation steps")
         
+        todays_date = date.today().strftime("%Y-%m-%d")
+
         system_instructions = (
-            "=============================\n"
+            "\n=============================\n"
+            f"TODAY'S DATE: {todays_date}\n"
+            "\n=============================\n"
             "BASE SYSTEM INSTRUCTIONS\n"
             "=============================\n"
             f"{base_instruction}\n"
@@ -124,8 +174,10 @@ class ResumeEvaluator:
 
     def _get_model_for_rule(self, rule: Dict[str, Any]) -> str:
         """Get the appropriate model for a given rule."""
-        models = rule.get('Model', ['claude-3-5-haiku-latest'])
-        return models[0] if models else 'claude-3-5-haiku-latest'
+        
+        models = rule.get('Model', [])
+        
+        return models[0] if models else DEFAULT_MODEL
 
     def _should_clear_history(self, rule: Dict[str, Any]) -> bool:
         """Check if conversation history should be cleared for this rule."""
@@ -167,11 +219,7 @@ class ResumeEvaluator:
             
         if self.llm is None:
             system_instructions = self._get_base_instructions()
-            self.llm = FFAnthropicCached(config={
-                "system_instructions": system_instructions,
-                "temperature": 0.5,
-                "max_tokens": 4000
-            })
+            self.llm = _get_ai(system_instructions=system_instructions)
 
     def _get_rule_stage(self, rule: Dict) -> int:
         """Helper method to consistently get stage as integer."""
@@ -486,7 +534,7 @@ class ResumeEvaluator:
                         if not batch:
                             continue
                             
-                        model = batch[0][1].get('Model', ['claude-3-5-haiku-latest'])[0]
+                        model = batch[0][1].get('Model', [DEFAULT_MODEL])[0]
                         logger.debug(f"Submitting batch {batch_idx + 1}/{len(batches)} "
                                 f"with {len(batch)} rules using model {model}")
                         
@@ -650,7 +698,8 @@ class ResumeEvaluator:
         combined_results = {
             "metadata": {
                 "evaluation_date": datetime.now().isoformat(),
-                "source_file": str(self.current_resume_path)
+                "source_file": str(self.current_resume_path),
+                "source_txt": self.resume_text
             },
             "overall_evaluation": {
                 "score": round(overall_score, 2),
@@ -714,6 +763,7 @@ class ResumeEvaluator:
                     logger.debug("Resume loaded successfully")
                     evaluation_result = self.evaluate_resume()
                     results.append(evaluation_result)
+
                     
                     # Export results
                     preferred_name = self._get_preferred_name()
