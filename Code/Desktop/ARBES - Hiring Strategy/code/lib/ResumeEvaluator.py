@@ -53,7 +53,7 @@ DEFAULT_MODEL='gpt-4o'
 # ==============================================================
 # USE AZURE OPENAI
 # ==============================================================
-from lib.AI.FFAIAzure import FFAIAzure as AI
+from lib.AI.FFAI_AzureOpenAI import FFAI_AzureOpenAI as AI
 from lib.AI.FFAzureOpenAI import FFAzureOpenAI
 
 
