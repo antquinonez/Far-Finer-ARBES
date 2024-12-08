@@ -1,29 +1,27 @@
 import os
 import sys
 import logging
+from libs.ARBES_Logging import initialize_logging
 
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-# logger = logging.getLogger(__name__)
-
-
-from libs.ARBES_Logging import setup_logging
 
 # ================================================================================
 # SETUP LOGGING
 # ================================================================================
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
+# --------------------------------------------------------------------------------
 script_name = os.path.basename(__file__)
 script_name_no_ext = os.path.splitext(script_name)[0]
 
-logger = setup_logging(
+# Initialize logging for the entire application
+logger = initialize_logging(
     log_file=f"logs/{script_name_no_ext}.log",
     max_files=20
 )
 
 logger.info("Starting application...")
 # ================================================================================
-
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
