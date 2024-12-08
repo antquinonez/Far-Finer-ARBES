@@ -17,18 +17,22 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         
     def _namer(self, default_name):
         """Generate backup filename with datetime instead of count"""
+        # Extract the base directory and filename
         directory = os.path.dirname(default_name)
         base_filename = os.path.basename(self.baseFilename)
         name, ext = os.path.splitext(base_filename)
         
+        # Create new filename with current datetime
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         return os.path.join(directory, f"{name}_{timestamp}{ext}")
     
     def _rotator(self, source, dest):
         """Handle the file rotation and cleanup"""
+        # Rename the current file
         if os.path.exists(source):
             os.rename(source, dest)
         
+        # Cleanup old files if we have too many
         self._cleanup_old_files()
     
     def _cleanup_old_files(self):
@@ -37,11 +41,14 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         base_filename = os.path.basename(self.baseFilename)
         name, ext = os.path.splitext(base_filename)
         
+        # Get all matching log files
         pattern = os.path.join(directory, f"{name}_*{ext}")
         files = glob.glob(pattern)
         
+        # Sort files by modification time (oldest first)
         files.sort(key=os.path.getmtime)
         
+        # Remove oldest files if we exceed max_files
         while len(files) >= self.max_files:
             oldest_file = files.pop(0)
             try:
@@ -50,49 +57,52 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
             except OSError as e:
                 logging.error(f"Error deleting {oldest_file}: {e}")
 
-def setup_logging(
+def initialize_logging(
     log_file=None,
     log_level=logging.DEBUG,
     log_format=None,
-    max_files=20,
-    logger_name=None
+    max_files=20
 ):
     """
-    Configure logging with detailed formatting and timed rotating file output.
+    Initialize application-wide logging configuration.
     
     Args:
         log_file (str, optional): Path to log file. If None, logs to console only.
         log_level (int, optional): Logging level. Defaults to DEBUG.
         log_format (str, optional): Custom log format string. If None, uses default format.
         max_files (int, optional): Maximum number of backup files to keep. Defaults to 20.
-        logger_name (str, optional): Name for the logger. If None, uses root logger.
+        
+    Returns:
+        logging.Logger: Configured root logger
     """
     if log_format is None:
         log_format = (
             '%(asctime)s | %(levelname)-8s | '
+            '%(name)s | '  # Added module name to format
             '%(filename)s:%(lineno)d | '
             '%(funcName)s | '
             '%(message)s'
         )
 
+    # Create formatter
     formatter = logging.Formatter(
         log_format,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # Create a named logger instead of using root logger
-    logger = logging.getLogger(logger_name) if logger_name else logging.getLogger()
-    logger.setLevel(log_level)
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
     
     # Remove any existing handlers
-    logger.handlers = []
+    root_logger.handlers = []
 
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    root_logger.addHandler(console_handler)
 
-    # Timed rotating file handler
+    # File handler
     if log_file:
         # Add timestamp to the log filename
         log_dir = os.path.dirname(log_file)
@@ -111,9 +121,31 @@ def setup_logging(
             encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        root_logger.addHandler(file_handler)
 
-    # Prevent propagation to parent loggers
-    logger.propagate = False
+        # Log the initialization
+        root_logger.info(f"Logging initialized. Log file: {full_log_path}")
+
+    return root_logger
+
+# # Example usage if run directly
+# if __name__ == "__main__":
+#     # Example setup
+#     logger = initialize_logging(
+#         log_file="logs/test.log",
+#         log_level=logging.DEBUG,
+#         max_files=20
+#     )
     
-    return logger
+#     # Example log messages
+#     logger.debug("Debug message")
+#     logger.info("Info message")
+#     logger.warning("Warning message")
+#     logger.error("Error message")
+#     logger.critical("Critical message")
+    
+#     # Example with exception
+#     try:
+#         1/0
+#     except Exception as e:
+#         logger.exception("An error occurred")
