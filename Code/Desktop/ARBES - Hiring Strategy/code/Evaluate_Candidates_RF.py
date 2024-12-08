@@ -1,11 +1,25 @@
 
 import logging
 from libs.ResumeEvaluator import ResumeEvaluator
+from libs.ARBES_Logging import setup_logging
+import os
 
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# ================================================================================
+# SETUP LOGGING
+# ================================================================================
+script_name = os.path.basename(__file__)
+script_name_no_ext = os.path.splitext(script_name)[0]
+
+logger = setup_logging(
+    log_file=f"logs/{script_name_no_ext}.log",
+    max_files=20
+)
+
+logger.info("Starting application...")
+# ================================================================================
 
 
 # Initialize evaluator
