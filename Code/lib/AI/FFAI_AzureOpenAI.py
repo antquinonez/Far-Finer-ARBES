@@ -83,7 +83,11 @@ class FFAI_AzureOpenAI:
                          prompt_name: Optional[str] = None,
                          history: Optional[List[str]] = None) -> str:
         """Generate response using Azure OpenAI"""
-        logger.info(f"Generating response for prompt: '{prompt}' with prompt_name: '{prompt_name}'")
+        logger.debug(f"\n===================================================================================")
+        logger.info(f"Generating response for prompt: '{prompt}'")
+        logger.debug(f"Prompt_name: '{prompt_name}'")
+        logger.debug(f"History: {history}") if history else logger.debug("No history provided")
+
         used_model = model if model else self.client.model
 
         try:
@@ -116,9 +120,18 @@ class FFAI_AzureOpenAI:
             
             # Generate response using the wrapped client
             response = self.client.generate_response(prompt=prompt, model=used_model)
+            logger.debug(f"Generated response: {response}")
             
             # Add response to histories
             self.permanent_history.add_turn_assistant(response)
+
+            logger.debug(f"""Adding interaction:
+                                model: {used_model}
+                                prompt: {prompt}
+                                response: {response}
+                                prompt_name: {prompt_name}
+                                history: {history}
+            """)
 
             self.ordered_history.add_interaction(
                 model=used_model,
@@ -145,6 +158,11 @@ class FFAI_AzureOpenAI:
     def get_interaction_history(self) -> List[Dict[str, Any]]:
         """Get complete history"""
         return self.history
+    
+    def get_all_interactions(self) -> List[Dict[str, Any]]:
+        """Get all interactions as dictionaries"""
+        return self.ordered_history.get_all_interactions()
+
 
     def get_latest_interaction_by_prompt_name(self, prompt_name: str) -> Optional[Dict[str, Any]]:
         """Get most recent interaction for a prompt name"""
