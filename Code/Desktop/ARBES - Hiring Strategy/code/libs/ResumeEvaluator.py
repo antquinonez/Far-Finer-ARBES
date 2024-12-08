@@ -107,6 +107,7 @@ class ResumeEvaluator:
         """Initialize the resume evaluator"""
         self.evaluation_rules = self._load_json(evaluation_rules_path)
         self.evaluation_steps = self._load_json(evaluation_steps_path)
+
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -181,13 +182,16 @@ class ResumeEvaluator:
             if not name.startswith('_')
         ]
         
-        return sorted(
+        sorted_rules_with_metadata = sorted(
             rules_with_metadata,
             key=lambda x: (
                 int(x[1].get('Stage', '1')),
                 int(x[1].get('Order', '1'))
             )
         )
+        
+        logger.debug(f"Sorted rules: {sorted_rules_with_metadata}")
+        return sorted_rules_with_metadata
 
     def _get_rule_stage(self, rule: Dict) -> int:
         """Get rule stage as integer"""
@@ -199,6 +203,8 @@ class ResumeEvaluator:
 
     def _group_rules_for_batching(self, rules: List[Tuple[str, Dict]]) -> List[List[Tuple[str, Dict]]]:
         """Group rules that can be batched together"""
+        logger.debug(f"Grouping rules for batching: {rules}")
+        
         batchable_rules = [
             (name, rule) for name, rule in rules
             if "pre_clear" in rule.get('Hist Handling', [])
@@ -219,6 +225,7 @@ class ResumeEvaluator:
                 batch = group_list[i:i + self.BATCH_SIZE]
                 batches.append(batch)
         
+        logger.debug(f"Batches: {batches}")
         return batches
 
     @backoff.on_exception(
@@ -229,9 +236,17 @@ class ResumeEvaluator:
     )
     def _evaluate_batch(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
         """Evaluate a batch of rules together"""
+        logger.info(f"Evaluating batch with {len(batch)} rules")
+
+        # create a tuple with the rule names -- we'll use this as the prompt_name
+        rules = []
+        for rule_name in batch:
+            rules.append(rule_name)
+        rules = tuple(rules)
+
         try:
             self.llm.clear_conversation()
-            combined_prompt = self._prepare_batch_prompt(batch)
+            combined_prompt, history_items = self._prepare_batch_prompt(batch)
             
             @backoff.on_exception(
                 backoff.expo,
@@ -243,7 +258,9 @@ class ResumeEvaluator:
             def execute_batch():
                 return self.llm.generate_response(
                     prompt=combined_prompt,
-                    model=model
+                    prompt_name=rules,
+                    model=model,
+                    history=history_items
                 )
             
             response = execute_batch()
@@ -271,12 +288,19 @@ class ResumeEvaluator:
                     rule,
                     f"Batch evaluation failed: {str(e)}"
                 )
-            raise
+            # raise
+            sys.exit(1)
 
     def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> str:
-        """Prepare a combined prompt for batch evaluation"""
+        """Prepare a combined prompt for batch evaluation
+             Uses the:
+                Attribute/rule name
+                Description
+                Specification (if available)
+        """
         prompt = "Please evaluate the following attributes together:\n\n"
         
+        data_dependencies = []
         for rule_name, rule in batch:
             prompt += (
                 f"Attribute Name: {rule_name}\n"
@@ -285,10 +309,14 @@ class ResumeEvaluator:
             if rule.get('Specification'):
                 prompt += f"Specification: {rule['Specification']}\n"
             prompt += "\n"
+
+            data_dependencies += rule.get('Data Dependency', [])
             
         prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
         
-        return prompt
+        return prompt, data_dependencies
+
+
 
     @backoff.on_exception(
         backoff.expo,
@@ -298,8 +326,15 @@ class ResumeEvaluator:
     )
     def _evaluate_single_rule(self, rule_name: str, rule: Dict[str, Any], use_steps: bool = True) -> Dict:
         """Evaluate a single rule"""
+        logger.debug(f"Evaluating rule {rule_name}")
+        logger.debug(f"Rule: {rule}")
+        logger.debug(f"Use steps: {use_steps}")
+        
         if self.llm is None:
             self._init_llm()
+
+        # get Data Dependency (history) for the Rule
+        history_items = rule.get('Data Dependency', [])
             
         if "pre_clear" in rule.get('Hist Handling', []):
             self.llm.clear_conversation()
@@ -320,7 +355,7 @@ class ResumeEvaluator:
             prompt = self._prepare_single_rule_prompt(rule_name, rule)
             
         try:
-            response = self.llm.generate_response(prompt, model=model)
+            response = self.llm.generate_response(prompt, model=model, prompt_name=rule_name, history=history_items)
             results = self._process_evaluation_response(response)
             
             stage = self._get_rule_stage(rule)
@@ -342,9 +377,10 @@ class ResumeEvaluator:
         )
         
         if rule.get('Specification'):
-            prompt += f"Specification: {rule['Specification']}\n"
+            prompt += f"Specification for Attribute 'value' field : {rule['Specification']}\n"
             
         prompt += "\nPlease provide your evaluation in JSON format."
+        logger.debug(f"Prepared single rule prompt: {prompt}")
         
         return prompt
 
@@ -387,6 +423,8 @@ class ResumeEvaluator:
             self.stage_results[stage]['_meta_cant_be_evaluated_df'] = []
             
         self.stage_results[stage]['_meta_cant_be_evaluated_df'].append(cannot_evaluate_item)
+        logger.warning(f"Rule {rule_name} cannot be evaluated: {reason}")
+
 
     @backoff.on_exception(
         backoff.expo,
@@ -450,6 +488,8 @@ class ResumeEvaluator:
                     (name, rule) for name, rule in stage_rules
                     if "pre_clear" in rule.get('Hist Handling', [])
                 ]
+
+                # TODO: Looks like I need to add other Hist Handling values to make more rules batchable.
                 
                 non_batchable_rules = [
                     (name, rule) for name, rule in stage_rules
