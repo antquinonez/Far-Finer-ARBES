@@ -17,22 +17,18 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         
     def _namer(self, default_name):
         """Generate backup filename with datetime instead of count"""
-        # Extract the base directory and filename
         directory = os.path.dirname(default_name)
         base_filename = os.path.basename(self.baseFilename)
         name, ext = os.path.splitext(base_filename)
         
-        # Create new filename with current datetime
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         return os.path.join(directory, f"{name}_{timestamp}{ext}")
     
     def _rotator(self, source, dest):
         """Handle the file rotation and cleanup"""
-        # Rename the current file
         if os.path.exists(source):
             os.rename(source, dest)
         
-        # Cleanup old files if we have too many
         self._cleanup_old_files()
     
     def _cleanup_old_files(self):
@@ -41,14 +37,11 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         base_filename = os.path.basename(self.baseFilename)
         name, ext = os.path.splitext(base_filename)
         
-        # Get all matching log files
         pattern = os.path.join(directory, f"{name}_*{ext}")
         files = glob.glob(pattern)
         
-        # Sort files by modification time (oldest first)
         files.sort(key=os.path.getmtime)
         
-        # Remove oldest files if we exceed max_files
         while len(files) >= self.max_files:
             oldest_file = files.pop(0)
             try:
@@ -61,7 +54,8 @@ def setup_logging(
     log_file=None,
     log_level=logging.DEBUG,
     log_format=None,
-    max_files=20
+    max_files=20,
+    logger_name=None
 ):
     """
     Configure logging with detailed formatting and timed rotating file output.
@@ -71,6 +65,7 @@ def setup_logging(
         log_level (int, optional): Logging level. Defaults to DEBUG.
         log_format (str, optional): Custom log format string. If None, uses default format.
         max_files (int, optional): Maximum number of backup files to keep. Defaults to 20.
+        logger_name (str, optional): Name for the logger. If None, uses root logger.
     """
     if log_format is None:
         log_format = (
@@ -85,8 +80,11 @@ def setup_logging(
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    logger = logging.getLogger()
+    # Create a named logger instead of using root logger
+    logger = logging.getLogger(logger_name) if logger_name else logging.getLogger()
     logger.setLevel(log_level)
+    
+    # Remove any existing handlers
     logger.handlers = []
 
     # Console handler
@@ -96,33 +94,26 @@ def setup_logging(
 
     # Timed rotating file handler
     if log_file:
-        log_path = Path(log_file)
+        # Add timestamp to the log filename
+        log_dir = os.path.dirname(log_file)
+        base_name, ext = os.path.splitext(os.path.basename(log_file))
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamped_filename = f"{base_name}_{timestamp}{ext}"
+        full_log_path = os.path.join(log_dir, timestamped_filename)
+        
+        # Create directory if it doesn't exist
+        log_path = Path(full_log_path)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         
         file_handler = CustomTimedRotatingFileHandler(
-            log_file,
+            full_log_path,
             max_files=max_files,
             encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
+    # Prevent propagation to parent loggers
+    logger.propagate = False
+    
     return logger
-
-# # Example usage
-# if __name__ == "__main__":
-#     log_file = "logs/app.log"
-#     logger = setup_logging(log_file=log_file, max_files=20)
-    
-#     # Example log messages
-#     logger.debug("Debug message")
-#     logger.info("Info message")
-#     logger.warning("Warning message")
-#     logger.error("Error message")
-#     logger.critical("Critical message")
-    
-#     # Example with exception
-#     try:
-#         1/0
-#     except Exception as e:
-#         logger.exception("An error occurred")
