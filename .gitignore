@@ -14,3 +14,4 @@
 **/resumes_old/processed/**
 **/resumes_old/to_proc/*
 **/*.log
+**/processed_entities.txt
