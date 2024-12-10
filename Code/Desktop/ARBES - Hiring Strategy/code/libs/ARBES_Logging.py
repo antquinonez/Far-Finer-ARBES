@@ -78,7 +78,7 @@ def initialize_logging(
     if log_format is None:
         log_format = (
             '%(asctime)s | %(levelname)-8s | '
-            '%(name)s | '  # Added module name to format
+            '%(name)s | '                       # module name
             '%(filename)s:%(lineno)d | '
             '%(funcName)s | '
             '%(message)s'
