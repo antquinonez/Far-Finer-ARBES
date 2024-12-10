@@ -311,8 +311,10 @@ class ResumeEvaluator:
             prompt += "\n"
 
             data_dependencies += rule.get('Data Dependency', [])
+            logger.debug(f"data_dependencies: {data_dependencies}")
             
         prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
+        logger.debug(f"Prompt: {prompt}")
         
         return prompt, data_dependencies
 
@@ -326,7 +328,7 @@ class ResumeEvaluator:
     )
     def _evaluate_single_rule(self, rule_name: str, rule: Dict[str, Any], use_steps: bool = True) -> Dict:
         """Evaluate a single rule"""
-        logger.debug(f"Evaluating rule {rule_name}")
+        logger.debug(f"Evaluating rule: {rule_name}")
         logger.debug(f"Rule: {rule}")
         logger.debug(f"Use steps: {use_steps}")
         
@@ -335,6 +337,7 @@ class ResumeEvaluator:
 
         # get Data Dependency (history) for the Rule
         history_items = rule.get('Data Dependency', [])
+        logger.debug(f"history_items: {history_items}")
             
         if "pre_clear" in rule.get('Hist Handling', []):
             self.llm.clear_conversation()
