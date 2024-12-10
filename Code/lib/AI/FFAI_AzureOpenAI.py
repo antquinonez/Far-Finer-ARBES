@@ -27,20 +27,31 @@ class FFAI_AzureOpenAI:
         
         # Debug current history
         for idx, entry in enumerate(self.history):
+            logger.debug("==================================================================")
             logger.debug(f"History entry {idx}:")
+            logger.debug("==================================================================")
             logger.debug(f"  Prompt name: {entry.get('prompt_name')}")
+            logger.debug("------------------------------------------------------------------")
             logger.debug(f"  Prompt: {entry.get('prompt')}")
+            logger.debug("------------------------------------------------------------------")
             logger.debug(f"  Response: {entry.get('response')}")
+            # logger.debug("==================================================================")
 
         # Get historical interactions for each prompt name
         history_entries = []
         for prompt_name in history:
-            logger.debug(f"Looking for entries with prompt_name: {prompt_name}")
+            logger.debug("===================================================================================")
+            logger.debug(f"Looking for stored named interactions with prompt_name: {prompt_name}")
             matching_entries = [
                 entry for entry in self.history 
                 if entry.get('prompt_name') == prompt_name
             ]
-            logger.debug(f"Found {len(matching_entries)} matching entries")
+
+            if(len(matching_entries)) == 0:
+                logger.warning(f"-- No matching entries for requested prompt_name: {prompt_name}")
+            else:
+                logger.debug(f"-- Found {len(matching_entries)} matching entries")
+
             
             if matching_entries:
                 latest = matching_entries[-1]
