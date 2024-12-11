@@ -38,6 +38,7 @@ class FFAI_AzureOpenAI:
             # logger.debug("==================================================================")
 
         # Get historical interactions for each prompt name
+        # this is the history that will be passed to the llm based on the information recorded  in self.history
         history_entries = []
         for prompt_name in history:
             logger.debug("===================================================================================")
@@ -104,38 +105,26 @@ class FFAI_AzureOpenAI:
         try:
             # Build prompt with history
             final_prompt = self._build_prompt(prompt, history)
-            
-            # Generate response
-            response = self.client.generate_response(
-                prompt=final_prompt,
-                model=used_model
-            )
-            
-            # Store interaction
-            interaction = {
-                'prompt': prompt,
-                'response': response,
-                'prompt_name': prompt_name,
-                'timestamp': time.time(),
-                'model': used_model
-            }
-            self.history.append(interaction)
-
-            logger.debug(f"Added new interaction to history: {interaction}")
-            
-            logger.info("Response generated successfully")
+            logger.debug(f"final_prompt built: {final_prompt}")
 
             # ==================================================================================
-            # Add to permanent history
-            self.permanent_history.add_turn_user(prompt)
-            
-            # Generate response using the wrapped client
-            response = self.client.generate_response(prompt=prompt, model=used_model)
+            # GENERATE RESPONSE USING THE WRAPPED CLIENT
+            # ==================================================================================
+            response = self.client.generate_response(prompt=final_prompt, model=used_model)
             logger.debug(f"Generated response: {response}")
-            
-            # Add response to histories
+
+            # ==================================================================================
+            # ADD TO PERMANENT HISTORY
+            # ==================================================================================
+            # 1) Add user prompt to histories
+            self.permanent_history.add_turn_user(prompt)
+        
+            # 2) Add response to histories
             self.permanent_history.add_turn_assistant(response)
 
+            # ==================================================================================
+            # RECORDING INTERACTIONS
+            # ==================================================================================
             logger.debug(f"""Adding interaction:
                                 model: {used_model}
                                 prompt: {prompt}
@@ -143,7 +132,21 @@ class FFAI_AzureOpenAI:
                                 prompt_name: {prompt_name}
                                 history: {history}
             """)
+        
+            # SELF.HISTORY -- Store interaction to self.history ---------------------------------
+            interaction = {
+                'prompt': prompt,
+                'response': response,
+                'prompt_name': prompt_name,
+                'timestamp': time.time(),
+                'model': used_model,
+                'history': history
+            }
+            self.history.append(interaction)
 
+            logger.debug(f"Added new interaction to self.history: {interaction}")
+
+            # ORDERED_HISTORY -- Store interaction to ordered history --------------------------
             self.ordered_history.add_interaction(
                 model=used_model,
                 prompt=prompt,
