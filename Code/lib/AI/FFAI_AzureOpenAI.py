@@ -17,13 +17,14 @@ class FFAI_AzureOpenAI:
         
         self.history = []
         self.clean_history = []
+        self.prompt_attr_history = []
 
         self.permanent_history = PermanentHistory()
 
         self.ordered_history = OrderedPromptHistory()
         self.clean_ordered_history = OrderedPromptHistory()
 
-        self.named_prompt_history=OrderedPromptHistory()
+        self.named_prompt_ordered_history=OrderedPromptHistory()
 
     def _clean_response(self, response: str) -> Any:
         """Process and validate the evaluation response"""
@@ -189,7 +190,31 @@ class FFAI_AzureOpenAI:
             self.clean_history.append(cleaned_interaction)
             logger.debug(f"Added new interaction to self.clean_history: {cleaned_interaction}")
 
+            # SELF.PROMPT_ATTR_HISTORY
 
+            if isinstance(cleaned_response, dict):
+                logger.debug("Response was JSON.")
+                for attr, value in cleaned_response.items():
+                    logger.debug(f"Response has attribute(s). attr: {attr} | value: {value}")
+
+                    attr_interaction = {
+                        'prompt': attr,
+                        'response': value,
+                        'prompt_name': attr,
+                        'timestamp': time.time(),
+                        'model': used_model,
+                        'history': history
+                    }
+
+
+                    self.prompt_attr_history.append(attr_interaction)
+                    logger.debug(f"Added new attr interaction to self.prompt_attr_history: {attr_interaction}")
+            else:
+                self.prompt_attr_history.append(interaction)
+                logger.debug(f"Interaction was not JSON, saving original 'prompt' and 'response' to prompt_attr_history.")
+                logger.debug(f"Added new interaction to self.prompt_attr_history: {interaction}")
+
+            ####################################################################################
             # ORDERED_HISTORY -- Store interaction to ordered history --------------------------
             self.ordered_history.add_interaction(
                 model=used_model,
