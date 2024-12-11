@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
 import time
+import json
 
 from .OrderedPromptHistory import OrderedPromptHistory
 from .PermanentHistory import PermanentHistory
@@ -13,9 +14,33 @@ class FFAI_AzureOpenAI:
     def __init__(self, azure_client):
         logger.info("Initializing FFAIAzure wrapper")
         self.client = azure_client
+        
         self.history = []
+        self.clean_history = []
+
         self.permanent_history = PermanentHistory()
+
         self.ordered_history = OrderedPromptHistory()
+        self.clean_ordered_history = OrderedPromptHistory()
+
+        self.named_prompt_history=OrderedPromptHistory()
+
+    def _clean_response(self, response: str) -> Any:
+        """Process and validate the evaluation response"""
+
+        if response.startswith('```json'):
+            try:
+                json_text = response[response.find('{'):response.rfind('}')+1]
+                cleaned_json_response = json.loads(json_text)
+                
+                return cleaned_json_response
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing evaluation response: {str(e)}")
+                raise
+        else:
+            return response
+
 
     def _build_prompt(self, prompt: str, history: Optional[List[str]] = None) -> str:
         if not history:
@@ -113,6 +138,10 @@ class FFAI_AzureOpenAI:
             response = self.client.generate_response(prompt=final_prompt, model=used_model)
             logger.debug(f"Generated response: {response}")
 
+            # turn response into a dict if a JSON responses.
+            cleaned_response = self._clean_response(response)
+            logger.debug(f"cleaned_response: {cleaned_response}")
+            
             # ==================================================================================
             # ADD TO PERMANENT HISTORY
             # ==================================================================================
@@ -133,6 +162,7 @@ class FFAI_AzureOpenAI:
                                 history: {history}
             """)
         
+
             # SELF.HISTORY -- Store interaction to self.history ---------------------------------
             interaction = {
                 'prompt': prompt,
@@ -142,9 +172,23 @@ class FFAI_AzureOpenAI:
                 'model': used_model,
                 'history': history
             }
-            self.history.append(interaction)
 
+            self.history.append(interaction)
             logger.debug(f"Added new interaction to self.history: {interaction}")
+
+            # SELF.CLEANED_HISTORY -- CLEANED JSON TO PY DICT -------------------------------------
+            cleaned_interaction = {
+                'prompt': prompt,
+                'response': cleaned_response,
+                'prompt_name': prompt_name,
+                'timestamp': time.time(),
+                'model': used_model,
+                'history': history
+            }
+
+            self.clean_history.append(cleaned_interaction)
+            logger.debug(f"Added new interaction to self.clean_history: {cleaned_interaction}")
+
 
             # ORDERED_HISTORY -- Store interaction to ordered history --------------------------
             self.ordered_history.add_interaction(
@@ -173,6 +217,11 @@ class FFAI_AzureOpenAI:
         """Get complete history"""
         return self.history
     
+    def get_clean_interaction_history(self) -> List[Dict[str, Any]]:
+        """Get complete history"""
+        return self.clean_history
+
+
     def get_all_interactions(self) -> List[Dict[str, Any]]:
         """Get all interactions as dictionaries"""
         return self.ordered_history.get_all_interactions()
