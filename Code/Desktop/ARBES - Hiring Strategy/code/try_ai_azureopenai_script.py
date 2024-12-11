@@ -67,7 +67,7 @@ response = ffai.generate_response("what did you say to the question?", prompt_na
 logger.info(f"Final response: {response}")
 
 
-response = ffai.generate_response("what did you say to the question? Respond with a JSON dict.", prompt_name='really final query', history=["final query"])
+response = ffai.generate_response("what did you say to the question? Also, how do i spell cat? Respond with a JSON dict.", prompt_name='really final query', history=["final query"])
 logger.info(f"Final response: {response}")
 
 
