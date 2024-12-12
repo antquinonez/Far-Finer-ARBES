@@ -121,6 +121,54 @@ class ResumeEvaluator:
         self.batch_strategy = BatchEvaluationStrategy(self)
         self.individual_strategy = IndividualEvaluationStrategy(self)
 
+    def _get_evaluation_rules(self):
+        try:
+            # Check if evaluation_rules exists and is a dictionary
+            if not hasattr(self, 'evaluation_rules') or not isinstance(self.evaluation_rules, dict):
+                raise AttributeError("evaluation_rules not properly initialized")
+            
+            return self.evaluation_rules
+
+        except Exception as e:
+            raise Exception(f"Error getting data dependency: {str(e)}")
+
+    def _get_all_data_dependencies(self):
+        try:
+            # Check if evaluation_rules exists and is a dictionary
+            if not hasattr(self, 'evaluation_rules') or not isinstance(self.evaluation_rules, dict):
+                raise AttributeError("evaluation_rules not properly initialized")
+            
+            # Create a new dictionary containing only Data Dependencies where they exist
+            data_dependencies = {}
+            for attr_name, rules in self.evaluation_rules.items():
+                if 'Data Dependency' in rules:
+                    data_dependencies[attr_name] = rules['Data Dependency']
+            
+            return data_dependencies
+            
+        except Exception as e:
+            raise Exception(f"Error getting data dependency: {str(e)}")
+
+    def get_data_dependency(self, attr_name):
+        try:
+            # Check if evaluation_rules exists and is a dictionary
+            if not hasattr(self, 'evaluation_rules') or not isinstance(self.evaluation_rules, dict):
+                raise AttributeError("evaluation_rules not properly initialized")
+                
+            # Check if attr_name exists in evaluation_rules
+            if attr_name not in self.evaluation_rules:
+                raise KeyError(f"Attribute '{attr_name}' not found in evaluation rules")
+                
+            # Check if 'Data Dependency' key exists
+            if 'Data Dependency' not in self.evaluation_rules[attr_name]:
+                raise KeyError(f"'Data Dependency' not found for attribute '{attr_name}'")
+                
+            return self.evaluation_rules[attr_name]['Data Dependency']
+            
+        except Exception as e:
+            raise Exception(f"Error getting data dependency: {str(e)}")
+
+
     def _load_json(self, file_path: str) -> Dict:
         """Load and parse a JSON file"""
         try:
@@ -260,7 +308,8 @@ class ResumeEvaluator:
                     prompt=combined_prompt,
                     prompt_name=rules,
                     model=model,
-                    history=history_items
+                    history=history_items,
+                    dependencies=self._get_all_data_dependencies()
                 )
             
             response = execute_batch()
@@ -516,6 +565,8 @@ class ResumeEvaluator:
         except Exception as e:
             logger.error(f"Error during resume evaluation: {str(e)}", exc_info=True)
             raise
+
+        #TODO: Publish history for debugging
 
     def _update_stage_results(self, results: Dict[str, Any], stage: int) -> None:
         """Update stage results with new evaluation results"""
