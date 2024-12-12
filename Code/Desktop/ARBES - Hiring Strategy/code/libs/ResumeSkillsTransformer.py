@@ -307,16 +307,16 @@ class ResumeSkillsTransformer:
             logger.debug(f"Transformed {len(self.skills_df['value'])} total skills")
             logger.debug(f"Final skills_df state: {json.dumps(self.skills_df, indent=2)}")
             
-            # Create new integrated JSON structure
+            # Create new integrated JSON structure with sorted content
             logger.debug("Building integrated JSON structure")
+            non_skills_content = {k: v for k, v in sorted(self.data.get("content", {}).items()) 
+                                if not k.startswith("skills_")}
+            
             integrated_json = {
                 "metadata": self.data.get("metadata", {}),
                 "overall_evaluation": self.data.get("overall_evaluation", {}),
                 "content": {
-                    # Include all content data except the original skills
-                    **{k: v for k, v in self.data.get("content", {}).items() 
-                    if not k.startswith("skills_")},
-                    # Add the new transformed skills_df
+                    **non_skills_content,
                     "skills_df": self.skills_df
                 },
                 "summary": self.data.get("summary", {})
