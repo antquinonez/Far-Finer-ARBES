@@ -43,7 +43,7 @@ class FFAI_AzureOpenAI:
             return response
 
 
-    # TODO: Figure out what to do with dependencies, which associate the named dependencies of an attribute 
+    # TODO: Figure out what to do with dependencies, which has data dependencies, if avail, for attribute 
     def _build_prompt(self, prompt: str, history: Optional[List[str]] = None, dependencies: Optional[Dict] = None) -> str:
         if not history:
             logger.debug("No history provided, returning original prompt")
