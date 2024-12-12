@@ -11,6 +11,8 @@ import time
 import backoff
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import groupby
+from typing import List, Tuple, Dict
+import textwrap
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.readers import SimpleDirectoryReader
@@ -341,32 +343,72 @@ class ResumeEvaluator:
             sys.exit(1)
 
     def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> str:
-        """Prepare a combined prompt for batch evaluation
-             Uses the:
-                Attribute/rule name
-                Description
-                Specification (if available)
+        """
+        Prepare a combined prompt for batch evaluation with improved formatting.
+        
+        Uses:
+            - Attribute/rule name
+            - Description
+            - Specification (if available)
+            
+        Returns:
+            Tuple[str, list]: Formatted prompt string and data dependencies
         """
         prompt = "Please evaluate the following attributes together:\n\n"
-        
         data_dependencies = []
+        
+        # Define formatting constants
+        HEADER_FORMAT = "=== {} ===\n"
+        FIELD_FORMAT = "{:<25} {}\n"
+        SECTION_SEPARATOR = "-" * 50 + "\n"
+        
         for rule_name, rule in batch:
-            prompt += (
-                f"Attribute Name: {rule_name}\n"
-                f"Description: {rule.get('Description', '')}\n"
-            )
-            if rule.get('Specification'):
-                prompt += f"Specification: {rule['Specification']}\n"
-            prompt += "\n"
-
-            data_dependencies += rule.get('Data Dependency', [])
-            logger.debug(f"data_dependencies: {data_dependencies}")
+            # Add a decorated header for each attribute
+            prompt += HEADER_FORMAT.format(rule_name)
             
+            # Core fields with consistent formatting
+            fields = [
+                ("Attribute Name", rule_name),
+                ("Description", rule.get('Description', '')),
+                ("Type", rule.get('Type')),
+                ("Sub_Type", rule.get('Sub_Type')),
+            ]
+            
+            # Optional fields
+            if rule.get('Specification'):
+                # Format specification with proper wrapping if it's multi-line
+                spec = rule['Specification']
+                if isinstance(spec, str):
+                    spec = textwrap.fill(spec, width=80, subsequent_indent=' ' * 25)
+                fields.append(("Specification", spec))
+                
+            if rule.get('value_type'):
+                fields.append(("Value Type", rule.get('value_type')))
+                
+            if rule.get('Weight'):
+                fields.append(("Weight", rule.get('Weight')))
+                
+            if rule.get('is_contribute_rating_overall') is not None:
+                fields.append(("Contributes to Rating", 
+                            rule.get('is_contribute_rating_overall')))
+            
+            # Format each field with consistent spacing
+            for field_name, value in fields:
+                prompt += FIELD_FORMAT.format(field_name + ":", str(value))
+            
+            # Add dependencies if they exist
+            deps = rule.get('Data Dependency', [])
+            if deps:
+                prompt += FIELD_FORMAT.format("Data Dependencies:", 
+                                            ", ".join(deps))
+                data_dependencies.extend(deps)
+            
+            # Add separator between attributes
+            prompt += SECTION_SEPARATOR
+        
         prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
-        logger.debug(f"Prompt: {prompt}")
         
         return prompt, data_dependencies
-
 
 
     @backoff.on_exception(
