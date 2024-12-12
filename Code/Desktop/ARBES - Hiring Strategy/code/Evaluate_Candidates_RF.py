@@ -1,14 +1,11 @@
 import logging
 from libs.ResumeEvaluator import ResumeEvaluator
-from libs.ARBES_Logging import initialize_logging
 import os
-
 
 # ================================================================================
 # SETUP LOGGING
 # ================================================================================
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+from libs.ARBES_Logging import initialize_logging
 
 # --------------------------------------------------------------------------------
 script_name = os.path.basename(__file__)

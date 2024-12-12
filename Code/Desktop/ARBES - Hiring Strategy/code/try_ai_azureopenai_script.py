@@ -66,8 +66,15 @@ logger.info("Conversation cleared")
 response = ffai.generate_response("what did you say to the question?", prompt_name='really final query', history=["final query"])
 logger.info(f"Final response: {response}")
 
+
+response = ffai.generate_response("what did you say to the question? Also, how do i spell cat? Respond with a JSON dict.", prompt_name='really final query', history=["final query"])
+logger.info(f"Final response: {response}")
+
+
 # Access history using any of the interface methods
 history = ffai.get_interaction_history()
+clean_history = ffai.get_clean_interaction_history()
+
 latest = ffai.get_latest_interaction()
 stats = ffai.get_model_usage_stats()
 prompt_dict = ffai.get_prompt_dict()
@@ -75,6 +82,9 @@ formatted_responses = ffai.get_formatted_responses(['math'])
 
 logger.info("Interaction History:")
 logger.info(history)
+logger.info("Clean Interaction History:")
+logger.info(clean_history)
+
 logger.info("----------")
 logger.info("Latest Interaction:")
 logger.info(latest)

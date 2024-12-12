@@ -11,6 +11,8 @@ import time
 import backoff
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import groupby
+from typing import List, Tuple, Dict
+import textwrap
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.readers import SimpleDirectoryReader
@@ -120,6 +122,54 @@ class ResumeEvaluator:
         # Initialize evaluation strategies
         self.batch_strategy = BatchEvaluationStrategy(self)
         self.individual_strategy = IndividualEvaluationStrategy(self)
+
+    def _get_evaluation_rules(self):
+        try:
+            # Check if evaluation_rules exists and is a dictionary
+            if not hasattr(self, 'evaluation_rules') or not isinstance(self.evaluation_rules, dict):
+                raise AttributeError("evaluation_rules not properly initialized")
+            
+            return self.evaluation_rules
+
+        except Exception as e:
+            raise Exception(f"Error getting data dependency: {str(e)}")
+
+    def _get_all_data_dependencies(self):
+        try:
+            # Check if evaluation_rules exists and is a dictionary
+            if not hasattr(self, 'evaluation_rules') or not isinstance(self.evaluation_rules, dict):
+                raise AttributeError("evaluation_rules not properly initialized")
+            
+            # Create a new dictionary containing only Data Dependencies where they exist
+            data_dependencies = {}
+            for attr_name, rules in self.evaluation_rules.items():
+                if 'Data Dependency' in rules:
+                    data_dependencies[attr_name] = rules['Data Dependency']
+            
+            return data_dependencies
+            
+        except Exception as e:
+            raise Exception(f"Error getting data dependency: {str(e)}")
+
+    def get_data_dependency(self, attr_name):
+        try:
+            # Check if evaluation_rules exists and is a dictionary
+            if not hasattr(self, 'evaluation_rules') or not isinstance(self.evaluation_rules, dict):
+                raise AttributeError("evaluation_rules not properly initialized")
+                
+            # Check if attr_name exists in evaluation_rules
+            if attr_name not in self.evaluation_rules:
+                raise KeyError(f"Attribute '{attr_name}' not found in evaluation rules")
+                
+            # Check if 'Data Dependency' key exists
+            if 'Data Dependency' not in self.evaluation_rules[attr_name]:
+                raise KeyError(f"'Data Dependency' not found for attribute '{attr_name}'")
+                
+            return self.evaluation_rules[attr_name]['Data Dependency']
+            
+        except Exception as e:
+            raise Exception(f"Error getting data dependency: {str(e)}")
+
 
     def _load_json(self, file_path: str) -> Dict:
         """Load and parse a JSON file"""
@@ -260,7 +310,8 @@ class ResumeEvaluator:
                     prompt=combined_prompt,
                     prompt_name=rules,
                     model=model,
-                    history=history_items
+                    history=history_items,
+                    dependencies=self._get_all_data_dependencies()
                 )
             
             response = execute_batch()
@@ -292,30 +343,72 @@ class ResumeEvaluator:
             sys.exit(1)
 
     def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> str:
-        """Prepare a combined prompt for batch evaluation
-             Uses the:
-                Attribute/rule name
-                Description
-                Specification (if available)
+        """
+        Prepare a combined prompt for batch evaluation with improved formatting.
+        
+        Uses:
+            - Attribute/rule name
+            - Description
+            - Specification (if available)
+            
+        Returns:
+            Tuple[str, list]: Formatted prompt string and data dependencies
         """
         prompt = "Please evaluate the following attributes together:\n\n"
-        
         data_dependencies = []
+        
+        # Define formatting constants
+        HEADER_FORMAT = "=== {} ===\n"
+        FIELD_FORMAT = "{:<25} {}\n"
+        SECTION_SEPARATOR = "-" * 50 + "\n"
+        
         for rule_name, rule in batch:
-            prompt += (
-                f"Attribute Name: {rule_name}\n"
-                f"Description: {rule.get('Description', '')}\n"
-            )
-            if rule.get('Specification'):
-                prompt += f"Specification: {rule['Specification']}\n"
-            prompt += "\n"
-
-            data_dependencies += rule.get('Data Dependency', [])
+            # Add a decorated header for each attribute
+            prompt += HEADER_FORMAT.format(rule_name)
             
+            # Core fields with consistent formatting
+            fields = [
+                ("Attribute Name", rule_name),
+                ("Description", rule.get('Description', '')),
+                ("Type", rule.get('Type')),
+                ("Sub_Type", rule.get('Sub_Type')),
+            ]
+            
+            # Optional fields
+            if rule.get('Specification'):
+                # Format specification with proper wrapping if it's multi-line
+                spec = rule['Specification']
+                if isinstance(spec, str):
+                    spec = textwrap.fill(spec, width=80, subsequent_indent=' ' * 25)
+                fields.append(("Specification", spec))
+                
+            if rule.get('value_type'):
+                fields.append(("Value Type", rule.get('value_type')))
+                
+            if rule.get('Weight'):
+                fields.append(("Weight", rule.get('Weight')))
+                
+            if rule.get('is_contribute_rating_overall') is not None:
+                fields.append(("Contributes to Rating", 
+                            rule.get('is_contribute_rating_overall')))
+            
+            # Format each field with consistent spacing
+            for field_name, value in fields:
+                prompt += FIELD_FORMAT.format(field_name + ":", str(value))
+            
+            # Add dependencies if they exist
+            deps = rule.get('Data Dependency', [])
+            if deps:
+                prompt += FIELD_FORMAT.format("Data Dependencies:", 
+                                            ", ".join(deps))
+                data_dependencies.extend(deps)
+            
+            # Add separator between attributes
+            prompt += SECTION_SEPARATOR
+        
         prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
         
         return prompt, data_dependencies
-
 
 
     @backoff.on_exception(
@@ -326,7 +419,7 @@ class ResumeEvaluator:
     )
     def _evaluate_single_rule(self, rule_name: str, rule: Dict[str, Any], use_steps: bool = True) -> Dict:
         """Evaluate a single rule"""
-        logger.debug(f"Evaluating rule {rule_name}")
+        logger.debug(f"Evaluating rule: {rule_name}")
         logger.debug(f"Rule: {rule}")
         logger.debug(f"Use steps: {use_steps}")
         
@@ -335,6 +428,7 @@ class ResumeEvaluator:
 
         # get Data Dependency (history) for the Rule
         history_items = rule.get('Data Dependency', [])
+        logger.debug(f"history_items: {history_items}")
             
         if "pre_clear" in rule.get('Hist Handling', []):
             self.llm.clear_conversation()
@@ -513,6 +607,8 @@ class ResumeEvaluator:
         except Exception as e:
             logger.error(f"Error during resume evaluation: {str(e)}", exc_info=True)
             raise
+
+        #TODO: Publish history for debugging
 
     def _update_stage_results(self, results: Dict[str, Any], stage: int) -> None:
         """Update stage results with new evaluation results"""

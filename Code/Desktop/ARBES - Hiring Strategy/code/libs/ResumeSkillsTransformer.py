@@ -112,6 +112,35 @@ class ResumeSkillsTransformer:
                 logger.error(f"Error processing listed skill {skill_entry}: {str(e)}", 
                             exc_info=True)
 
+    def transform_software_skills(self) -> None:
+        """Transform skills_listed_df data into standardized format."""
+        stage_data = self.get_stage_data()
+        listed_skills = stage_data.get("skills_software_df", {}).get("value", [])
+        logger.debug(f"Processing {len(listed_skills)} software skill collections")
+        logger.debug(f"Raw listed skills: {json.dumps(listed_skills, indent=2)}")
+        
+        for skill_entry in listed_skills:
+            try:
+                # Add category skill
+                self.add_skill({
+                    "skill": skill_entry["skill"],
+                    "type": "category",
+                    "sub_type": "software",
+                    "score": 5
+                })
+                # Add technology skills
+                for tech in skill_entry.get("technologies", []):
+                    self.add_skill({
+                        "skill": tech,
+                        "type": "technology",
+                        "sub_type": "software",
+                        "score": 5
+                    })
+            except Exception as e:
+                logger.error(f"Error processing listed skill {skill_entry}: {str(e)}", 
+                            exc_info=True)
+
+
     def transform_detailed_skills(self) -> None:
         """Transform skills_detailed_df data into standardized format."""
         stage_data = self.get_stage_data()
@@ -265,7 +294,10 @@ class ResumeSkillsTransformer:
             
             logger.debug("Starting listed skills transformation")
             self.transform_listed_skills()
-            
+
+            logger.debug("Starting software skills transformation")
+            self.transform_software_skills()
+
             logger.debug("Starting generic skills transformation")
             self.transform_generic_skills()
             
@@ -275,16 +307,16 @@ class ResumeSkillsTransformer:
             logger.debug(f"Transformed {len(self.skills_df['value'])} total skills")
             logger.debug(f"Final skills_df state: {json.dumps(self.skills_df, indent=2)}")
             
-            # Create new integrated JSON structure
+            # Create new integrated JSON structure with sorted content
             logger.debug("Building integrated JSON structure")
+            non_skills_content = {k: v for k, v in sorted(self.data.get("content", {}).items()) 
+                                if not k.startswith("skills_")}
+            
             integrated_json = {
                 "metadata": self.data.get("metadata", {}),
                 "overall_evaluation": self.data.get("overall_evaluation", {}),
                 "content": {
-                    # Include all content data except the original skills
-                    **{k: v for k, v in self.data.get("content", {}).items() 
-                    if not k.startswith("skills_")},
-                    # Add the new transformed skills_df
+                    **non_skills_content,
                     "skills_df": self.skills_df
                 },
                 "summary": self.data.get("summary", {})
