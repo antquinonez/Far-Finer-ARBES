@@ -112,6 +112,35 @@ class ResumeSkillsTransformer:
                 logger.error(f"Error processing listed skill {skill_entry}: {str(e)}", 
                             exc_info=True)
 
+    def transform_software_skills(self) -> None:
+        """Transform skills_listed_df data into standardized format."""
+        stage_data = self.get_stage_data()
+        listed_skills = stage_data.get("skills_software_df", {}).get("value", [])
+        logger.debug(f"Processing {len(listed_skills)} software skill collections")
+        logger.debug(f"Raw listed skills: {json.dumps(listed_skills, indent=2)}")
+        
+        for skill_entry in listed_skills:
+            try:
+                # Add category skill
+                self.add_skill({
+                    "skill": skill_entry["skill"],
+                    "type": "category",
+                    "sub_type": "software",
+                    "score": 5
+                })
+                # Add technology skills
+                for tech in skill_entry.get("technologies", []):
+                    self.add_skill({
+                        "skill": tech,
+                        "type": "technology",
+                        "sub_type": "software",
+                        "score": 5
+                    })
+            except Exception as e:
+                logger.error(f"Error processing listed skill {skill_entry}: {str(e)}", 
+                            exc_info=True)
+
+
     def transform_detailed_skills(self) -> None:
         """Transform skills_detailed_df data into standardized format."""
         stage_data = self.get_stage_data()
@@ -265,7 +294,10 @@ class ResumeSkillsTransformer:
             
             logger.debug("Starting listed skills transformation")
             self.transform_listed_skills()
-            
+
+            logger.debug("Starting software skills transformation")
+            self.transform_software_skills()
+
             logger.debug("Starting generic skills transformation")
             self.transform_generic_skills()
             
