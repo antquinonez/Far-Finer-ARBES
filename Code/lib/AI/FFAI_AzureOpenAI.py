@@ -43,16 +43,17 @@ class FFAI_AzureOpenAI:
             return response
 
 
-    def _build_prompt(self, prompt: str, history: Optional[List[str]] = None) -> str:
+    # TODO: Figure out what to do with dependencies, which associate the named dependencies of an attribute 
+    def _build_prompt(self, prompt: str, history: Optional[List[str]] = None, dependencies: Optional[Dict] = None) -> str:
         if not history:
             logger.debug("No history provided, returning original prompt")
             return prompt
             
         logger.info(f"Building prompt with history references: {history}")
-        logger.info(f"Current history size: {len(self.history)}")
+        logger.info(f"Current history size: {len(self.prompt_attr_history)}")
         
         # Debug current history
-        for idx, entry in enumerate(self.history):
+        for idx, entry in enumerate(self.prompt_attr_history):
             logger.debug("==================================================================")
             logger.debug(f"History entry {idx}:")
             logger.debug("==================================================================")
@@ -64,13 +65,13 @@ class FFAI_AzureOpenAI:
             # logger.debug("==================================================================")
 
         # Get historical interactions for each prompt name
-        # this is the history that will be passed to the llm based on the information recorded  in self.history
+        # this is the history that will be passed to the llm based on the information recorded  in self.prompt_attr_history
         history_entries = []
         for prompt_name in history:
             logger.debug("===================================================================================")
             logger.debug(f"Looking for stored named interactions with prompt_name: {prompt_name}")
             matching_entries = [
-                entry for entry in self.history 
+                entry for entry in self.prompt_attr_history 
                 if entry.get('prompt_name') == prompt_name
             ]
 
@@ -115,11 +116,13 @@ class FFAI_AzureOpenAI:
         logger.info(f"Final constructed prompt:\n{final_prompt}")
         return final_prompt
 
+    #todo: refer to data dependencies needed by prompt as prompt_dependencies
     def generate_response(self,
                          prompt: str,
                          model: Optional[str] = None,
                          prompt_name: Optional[str] = None,
-                         history: Optional[List[str]] = None) -> str:
+                         history: Optional[List[str]] = None,
+                         dependencies: Optional[dict] = None ) -> str:
         """Generate response using Azure OpenAI"""
         logger.debug(f"\n===================================================================================")
         logger.info(f"Generating response for prompt: '{prompt}'")
@@ -130,7 +133,7 @@ class FFAI_AzureOpenAI:
 
         try:
             # Build prompt with history
-            final_prompt = self._build_prompt(prompt, history)
+            final_prompt = self._build_prompt(prompt, history, dependencies)
             logger.debug(f"final_prompt built: {final_prompt}")
 
             # ==================================================================================
@@ -190,7 +193,7 @@ class FFAI_AzureOpenAI:
             self.clean_history.append(cleaned_interaction)
             logger.debug(f"Added new interaction to self.clean_history: {cleaned_interaction}")
 
-            # SELF.PROMPT_ATTR_HISTORY
+            # SELF.PROMPT_ATTR_HISTORY ------------------------------------------------------------
 
             if isinstance(cleaned_response, dict):
                 logger.debug("Response was JSON.")
