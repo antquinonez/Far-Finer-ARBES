@@ -346,10 +346,10 @@ class ResumeEvaluator:
         """
         Prepare a combined prompt for batch evaluation with improved formatting.
         
-        Uses:
-            - Attribute/rule name
-            - Description
-            - Specification (if available)
+        Handles newlines in specifications and provides consistent formatting for all fields.
+        
+        Args:
+            batch: List of tuples containing (rule_name, rule_dict) pairs
             
         Returns:
             Tuple[str, list]: Formatted prompt string and data dependencies
@@ -360,7 +360,8 @@ class ResumeEvaluator:
         # Define formatting constants
         HEADER_FORMAT = "=== {} ===\n"
         FIELD_FORMAT = "{:<25} {}\n"
-        SECTION_SEPARATOR = "-" * 50 + "\n"
+        SECTION_SEPARATOR = "=" * 100 + "\n"
+        INDENT = " " * 20  # Indentation for wrapped lines
         
         for rule_name, rule in batch:
             # Add a decorated header for each attribute
@@ -374,14 +375,25 @@ class ResumeEvaluator:
                 ("Sub_Type", rule.get('Sub_Type')),
             ]
             
-            # Optional fields
+            # Handle Specification field specially due to potential newlines
             if rule.get('Specification'):
-                # Format specification with proper wrapping if it's multi-line
                 spec = rule['Specification']
                 if isinstance(spec, str):
-                    spec = textwrap.fill(spec, width=80, subsequent_indent=' ' * 25)
-                fields.append(("Specification", spec))
-                
+                    # Split the specification by newlines
+                    spec_lines = spec.split('\n')
+                    # Format first line normally
+                    formatted_spec = spec_lines[0]
+                    # Indent subsequent lines
+                    if len(spec_lines) > 1:
+                        formatted_spec += '\n' + '\n'.join(INDENT + line.strip() 
+                                                        for line in spec_lines[1:] 
+                                                        if line.strip())
+                    fields.append(("Specification", formatted_spec))
+                else:
+                    # Handle non-string specifications (e.g., lists or dicts)
+                    fields.append(("Specification", str(spec)))
+                    
+            # Add optional fields
             if rule.get('value_type'):
                 fields.append(("Value Type", rule.get('value_type')))
                 
@@ -392,9 +404,18 @@ class ResumeEvaluator:
                 fields.append(("Contributes to Rating", 
                             rule.get('is_contribute_rating_overall')))
             
-            # Format each field with consistent spacing
+            # Format each field with proper handling of newlines
             for field_name, value in fields:
-                prompt += FIELD_FORMAT.format(field_name + ":", str(value))
+                if isinstance(value, str) and '\n' in value:
+                    # First line with field name
+                    lines = value.split('\n')
+                    prompt += FIELD_FORMAT.format(field_name + ":", lines[0])
+                    # Subsequent lines indented
+                    for line in lines[1:]:
+                        if line.strip():  # Skip empty lines
+                            prompt += INDENT + line + '\n'
+                else:
+                    prompt += FIELD_FORMAT.format(field_name + ":", str(value))
             
             # Add dependencies if they exist
             deps = rule.get('Data Dependency', [])
@@ -409,7 +430,6 @@ class ResumeEvaluator:
         prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
         
         return prompt, data_dependencies
-
 
     @backoff.on_exception(
         backoff.expo,
