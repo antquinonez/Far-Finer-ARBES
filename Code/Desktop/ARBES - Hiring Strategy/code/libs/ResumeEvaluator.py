@@ -26,6 +26,8 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..', '..')))
 from lib.AI.FFAI_AzureOpenAI import FFAI_AzureOpenAI as AI
 from lib.AI.FFAzureOpenAI import FFAzureOpenAI
 
+from libs.FieldFormatter import FieldFormatter
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -342,11 +344,9 @@ class ResumeEvaluator:
             # raise
             sys.exit(1)
 
-    def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> str:
+    def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> Tuple[str, List]:
         """
         Prepare a combined prompt for batch evaluation with improved formatting.
-        
-        Handles newlines in specifications and provides consistent formatting for all fields.
         
         Args:
             batch: List of tuples containing (rule_name, rule_dict) pairs
@@ -354,82 +354,53 @@ class ResumeEvaluator:
         Returns:
             Tuple[str, list]: Formatted prompt string and data dependencies
         """
-        prompt = "Please evaluate the following attributes together:\n\n"
+        formatter = FieldFormatter()
+        prompt = ["Please evaluate the following attributes together:\n"]
         data_dependencies = []
         
-        # Define formatting constants
-        HEADER_FORMAT = "=== {} ===\n"
-        FIELD_FORMAT = "{:<25} {}\n"
-        SECTION_SEPARATOR = "=" * 100 + "\n"
-        INDENT = " " * 20  # Indentation for wrapped lines
-        
         for rule_name, rule in batch:
-            # Add a decorated header for each attribute
-            prompt += HEADER_FORMAT.format(rule_name)
+            # Add header with proper spacing
+            prompt.append(f"\n=========================== {rule_name} ===========================\n")
             
-            # Core fields with consistent formatting
-            fields = [
+            # Core fields in consistent order
+            core_fields = [
                 ("Attribute Name", rule_name),
-                ("Description", rule.get('Description', '')),
                 ("Type", rule.get('Type')),
                 ("Sub_Type", rule.get('Sub_Type')),
+                ("Value Type", rule.get('value_type')),
+                ("Weight", rule.get('Weight')),
+                ("is_contribute_rating_overall", rule.get('is_contribute_rating_overall')),
+                ("Description", rule.get('Description'))
             ]
             
-            # Handle Specification field specially due to potential newlines
-            if rule.get('Specification'):
+            # Format each core field
+            for field_name, value in core_fields:
+                formatted = formatter.format_field(field_name, value)
+                if formatted:
+                    prompt.append(formatted)
+
+            prompt.append('')
+
+            # Handle Specification separately
+            if 'Specification' in rule:
                 spec = rule['Specification']
-                if isinstance(spec, str):
-                    # Split the specification by newlines
-                    spec_lines = spec.split('\n')
-                    # Format first line normally
-                    formatted_spec = spec_lines[0]
-                    # Indent subsequent lines
-                    if len(spec_lines) > 1:
-                        formatted_spec += '\n' + '\n'.join(INDENT + line.strip() 
-                                                        for line in spec_lines[1:] 
-                                                        if line.strip())
-                    fields.append(("Specification", formatted_spec))
-                else:
-                    # Handle non-string specifications (e.g., lists or dicts)
-                    fields.append(("Specification", str(spec)))
-                    
-            # Add optional fields
-            if rule.get('value_type'):
-                fields.append(("Value Type", rule.get('value_type')))
-                
-            if rule.get('Weight'):
-                fields.append(("Weight", rule.get('Weight')))
-                
-            if rule.get('is_contribute_rating_overall') is not None:
-                fields.append(("Contributes to Rating", 
-                            rule.get('is_contribute_rating_overall')))
+                formatted = formatter.format_field("Specification", spec)
+                if formatted:
+                    prompt.append(formatted)
             
-            # Format each field with proper handling of newlines
-            for field_name, value in fields:
-                if isinstance(value, str) and '\n' in value:
-                    # First line with field name
-                    lines = value.split('\n')
-                    prompt += FIELD_FORMAT.format(field_name + ":", lines[0])
-                    # Subsequent lines indented
-                    for line in lines[1:]:
-                        if line.strip():  # Skip empty lines
-                            prompt += INDENT + line + '\n'
-                else:
-                    prompt += FIELD_FORMAT.format(field_name + ":", str(value))
-            
-            # Add dependencies if they exist
+            # Handle Data Dependencies
             deps = rule.get('Data Dependency', [])
             if deps:
-                prompt += FIELD_FORMAT.format("Data Dependencies:", 
-                                            ", ".join(deps))
+                formatted = formatter.format_field("Data Dependencies", deps)
+                if formatted:
+                    prompt.append(formatted)
                 data_dependencies.extend(deps)
-            
-            # Add separator between attributes
-            prompt += SECTION_SEPARATOR
+                
+            prompt.append('')  # Add blank line between attributes
         
-        prompt += "\nPlease provide your evaluation in JSON format with results for each attribute."
+        prompt.append("\nPlease provide your evaluation in JSON format with results for each attribute.")
         
-        return prompt, data_dependencies
+        return '\n'.join(prompt), data_dependencies
 
     @backoff.on_exception(
         backoff.expo,
