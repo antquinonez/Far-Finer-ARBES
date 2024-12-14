@@ -724,6 +724,23 @@ class DocumentEvaluator:
             logger.error(f"Error during data transformation: {str(e)}", exc_info=True)
             return combined_results
 
+    def _reset_evaluator_state(self):
+        """Fully reset all evaluator state between documents"""
+        self.document_text = None
+        self.document_index = None
+        self.current_document_path = None
+        self.stage_results = self._init_stage_results()
+        
+        self.llm = None
+        
+        # Clear any cached data dependencies
+        if hasattr(self, 'evaluation_rules'):
+            # Reset any accumulated history in rules
+            for rule in self.evaluation_rules.values():
+                if 'Data Dependency' in rule:
+                    rule['Data Dependency'] = []
+
+
     def evaluate_directory(self, document_dir: str) -> List[Dict]:
         """Evaluate all supported document files in directory"""
         document_dir_path = Path(document_dir)
@@ -743,8 +760,9 @@ class DocumentEvaluator:
             
             try:
                 # Reset state for new document
-                self.document_text = None
-                self.current_document_path = None
+                # Use the new reset method
+                self._reset_evaluator_state()
+                
                 self.stage_results = self._init_stage_results()
                 
                 if self.llm:
