@@ -20,7 +20,7 @@ logger = initialize_logging(
 logger.info("Starting application...")
 # ================================================================================
 # Initialize evaluator
-# evaluation_rules_path="candidate_evaluation_rules.json",
+# ================================================================================
 
 evaluator = DocumentEvaluator(
     evaluation_rules_path="code_evaluation_rules.json",
@@ -28,7 +28,7 @@ evaluator = DocumentEvaluator(
     output_dir="evaluation_results"
 )
 
-results = evaluator.evaluate_directory("documents_to_evaluate")
+results = evaluator.evaluate_directory("documents_to_evaluate/code")
 
 # Log summary
 logger.info(f"Processed {len(results)} documents")

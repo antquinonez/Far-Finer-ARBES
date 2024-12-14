@@ -28,7 +28,7 @@ evaluator = DocumentEvaluator(
     output_dir="evaluation_results"
 )
 
-results = evaluator.evaluate_directory("documents_to_evaluate")
+results = evaluator.evaluate_directory("documents_to_evaluate/resumes")
 
 # Log summary
 logger.info(f"Processed {len(results)} documents")
