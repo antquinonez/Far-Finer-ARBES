@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class EvaluationStrategy(ABC):
     """Base strategy for evaluation rule processing"""
     
-    def __init__(self, evaluator: 'ResumeEvaluator'):
+    def __init__(self, evaluator: 'DocumentEvaluator'):
         self.evaluator = evaluator
         logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
@@ -100,15 +100,15 @@ class IndividualEvaluationStrategy(EvaluationStrategy):
                 
         return results
 
-class ResumeEvaluator:
-    """Enhanced resume evaluator with strategy pattern"""
+class DocumentEvaluator:
+    """Enhanced document evaluator with strategy pattern"""
     
-    SUPPORTED_EXTENSIONS: Set[str] = {'.pdf', '.doc', '.docx', '.txt'}
+    SUPPORTED_EXTENSIONS: Set[str] = {'.pdf', '.doc', '.docx', '.txt', '.py'}
     BATCH_SIZE = 4
     DEFAULT_MODEL = 'gpt-4'
     
     def __init__(self, evaluation_rules_path: str, evaluation_steps_path: str, output_dir: str):
-        """Initialize the resume evaluator"""
+        """Initialize the document evaluator"""
         self.evaluation_rules = self._load_json(evaluation_rules_path)
         self.evaluation_steps = self._load_json(evaluation_steps_path)
 
@@ -116,8 +116,8 @@ class ResumeEvaluator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         self.document_index = None
-        self.resume_text = None
-        self.current_resume_path = None
+        self.document_text = None
+        self.current_document_path = None
         self.stage_results = self._init_stage_results()
         self.llm = None
         
@@ -187,7 +187,7 @@ class ResumeEvaluator:
         return {1: {}, 2: {}, 3: {}}
 
     def _get_base_instructions(self) -> str:
-        """Get base system instructions with resume content"""
+        """Get base system instructions with document to be evaluated content"""
         base_instruction = next(
             (step_info.get('Instruction', '') 
              for step_name, step_info in self.evaluation_steps.items()
@@ -207,14 +207,14 @@ class ResumeEvaluator:
             f"{base_instruction}\n"
         )
 
-        if self.resume_text:
+        if self.document_text:
             system_instructions = (
                 f"{system_instructions}\n"
-                "RESUME TEXT\n"
-                f"{self.resume_text}\n"
+                "DOCUMENT TO BE EVALUATED TEXT\n"
+                f"{self.document_text}\n"
             )
         else:
-            raise ValueError("Resume text must be loaded before getting system instructions")
+            raise ValueError("Document to be evaluated text must be loaded before getting system instructions")
             
         return system_instructions
 
@@ -222,8 +222,8 @@ class ResumeEvaluator:
         """Initialize the AI client"""
         azure_client = FFAzureOpenAI(config={
             "system_instructions": system_instructions,
-            "temperature": 0.2,
-            "max_tokens": 7000
+            "temperature": 0.5,
+            "max_tokens": 16384
         })
         return AI(azure_client)
 
@@ -484,7 +484,7 @@ class ResumeEvaluator:
                         "sub_type": rule.get('Sub_Type', 'None'),
                         "value": field_value,
                         "eval": f"Evaluated from {field_name}",
-                        "source": ["resume"],
+                        "source": ["document"],
                         "source_detail": ["Document content"]
                     }
             
@@ -517,39 +517,39 @@ class ResumeEvaluator:
         max_tries=3,
         max_time=300
     )
-    def load_resume(self, resume_path: str) -> bool:
-        """Load and index a resume document"""
+    def load_document(self, document_path: str) -> bool:
+        """Load and index a document document"""
         try:
-            documents = SimpleDirectoryReader(input_files=[resume_path]).load_data()
+            documents = SimpleDirectoryReader(input_files=[document_path]).load_data()
             self.document_index = VectorStoreIndex.from_documents(documents)
-            self.resume_text = "\n".join([doc.text for doc in documents])
-            self.current_resume_path = resume_path
+            self.document_text = "\n".join([doc.text for doc in documents])
+            self.current_document_path = document_path
             
             # Initialize LLM if needed
             self._init_llm()
             
-            logger.info(f"Successfully loaded and indexed resume from {resume_path}")
+            logger.info(f"Successfully loaded and indexed document from {document_path}")
             return True
             
         except Exception as e:
-            logger.error(f"Error loading resume {resume_path}: {str(e)}")
+            logger.error(f"Error loading document {document_path}: {str(e)}")
             return False
 
     def _init_llm(self) -> None:
         """Initialize the LLM client"""
-        if not self.resume_text:
-            raise ValueError("Resume text must be loaded before initializing LLM")
+        if not self.document_text:
+            raise ValueError("Document text must be loaded before initializing LLM")
             
         if self.llm is None:
             system_instructions = self._get_base_instructions()
             self.llm = self._get_ai(system_instructions=system_instructions)
 
-    def evaluate_resume(self, use_steps: bool = True) -> Dict:
-        """Perform full resume evaluation using appropriate strategies"""
-        logger.info(f"Starting resume evaluation for {self.current_resume_path}")
+    def evaluate_document(self, use_steps: bool = True) -> Dict:
+        """Perform full document evaluation using appropriate strategies"""
+        logger.info(f"Starting document evaluation for {self.current_document_path}")
         
-        if not self.resume_text:
-            raise ValueError("No resume has been loaded. Please load a resume first.")
+        if not self.document_text:
+            raise ValueError("No document has been loaded. Please load a document to be evaluated first.")
             
         self.stage_results = self._init_stage_results()
         
@@ -596,7 +596,7 @@ class ResumeEvaluator:
             return self.get_combined_evaluation()
             
         except Exception as e:
-            logger.error(f"Error during resume evaluation: {str(e)}", exc_info=True)
+            logger.error(f"Error during document evaluation: {str(e)}", exc_info=True)
             raise
 
         #TODO: Publish history for debugging
@@ -696,8 +696,8 @@ class ResumeEvaluator:
         combined_results = {
             "metadata": {
                 "evaluation_date": datetime.now().isoformat(),
-                "source_file": str(self.current_resume_path),
-                "source_txt": self.resume_text
+                "source_file": str(self.current_document_path),
+                "source_txt": self.document_text
             },
             "overall_evaluation": {
                 "score": round(overall_score, 2),
@@ -724,34 +724,34 @@ class ResumeEvaluator:
             logger.error(f"Error during data transformation: {str(e)}", exc_info=True)
             return combined_results
 
-    def evaluate_directory(self, resume_dir: str) -> List[Dict]:
-        """Evaluate all supported resume files in directory"""
-        resume_dir_path = Path(resume_dir)
-        if not resume_dir_path.is_dir():
-            raise NotADirectoryError(f"{resume_dir} is not a directory")
+    def evaluate_directory(self, document_dir: str) -> List[Dict]:
+        """Evaluate all supported document files in directory"""
+        document_dir_path = Path(document_dir)
+        if not document_dir_path.is_dir():
+            raise NotADirectoryError(f"{document_dir} is not a directory")
 
         results = []
-        resume_files = [
-            f for f in resume_dir_path.iterdir()
+        document_files = [
+            f for f in document_dir_path.iterdir()
             if self._is_supported_file(f)
         ]
         
-        logger.info(f"Found {len(resume_files)} supported resume files to process")
+        logger.info(f"Found {len(document_files)} supported document files to process")
         
-        for file_path in resume_files:
-            logger.info(f"Processing resume: {file_path}")
+        for file_path in document_files:
+            logger.info(f"Processing document: {file_path}")
             
             try:
-                # Reset state for new resume
-                self.resume_text = None
-                self.current_resume_path = None
+                # Reset state for new document
+                self.document_text = None
+                self.current_document_path = None
                 self.stage_results = self._init_stage_results()
                 
                 if self.llm:
                     self.llm.clear_conversation()
                 
-                if self.load_resume(str(file_path)):
-                    evaluation_result = self.evaluate_resume()
+                if self.load_document(str(file_path)):
+                    evaluation_result = self.evaluate_document()
                     results.append(evaluation_result)
 
                     preferred_name = self._get_preferred_name()
@@ -760,10 +760,10 @@ class ResumeEvaluator:
                     
                     time.sleep(2)
                 else:
-                    logger.error(f"Failed to load resume: {file_path}")
+                    logger.error(f"Failed to load document: {file_path}")
                     
             except Exception as e:
-                logger.error(f"Error processing resume {file_path}: {str(e)}", exc_info=True)
+                logger.error(f"Error processing document {file_path}: {str(e)}", exc_info=True)
                 continue
 
         return results
@@ -773,13 +773,13 @@ class ResumeEvaluator:
         preferred_name = self.stage_results[1].get('preferred_name', {}).get('value')
         
         if not preferred_name:
-            preferred_name = Path(self.current_resume_path).stem
+            preferred_name = Path(self.current_document_path).stem
             
         safe_name = "".join(c for c in preferred_name if c.isalnum() or c in (' ', '-', '_')).strip()
         return safe_name.replace(' ', '_')
 
     def export_results(self, output_path: str) -> None:
-        """Export evaluation results and move processed resume"""
+        """Export evaluation results and move processed documents"""
         try:
             combined_results = self.get_combined_evaluation()
             
@@ -787,38 +787,38 @@ class ResumeEvaluator:
                 json.dump(combined_results, f, indent=2)
             logger.info(f"Results exported to {output_path}")
             
-            if self.current_resume_path:
-                resume_path = Path(self.current_resume_path)
-                processed_dir = resume_path.parent / 'processed'
+            if self.current_document_path:
+                document_path = Path(self.current_document_path)
+                processed_dir = document_path.parent / 'processed'
                 processed_dir.mkdir(parents=True, exist_ok=True)
                 
-                dest_path = processed_dir / resume_path.name
+                dest_path = processed_dir / document_path.name
                 counter = 1
                 while dest_path.exists():
-                    new_name = f"{resume_path.stem}_{counter}{resume_path.suffix}"
+                    new_name = f"{document_path.stem}_{counter}{document_path.suffix}"
                     dest_path = processed_dir / new_name
                     counter += 1
                 
-                shutil.move(str(resume_path), str(dest_path))
-                logger.info(f"Moved processed resume to {dest_path}")
+                shutil.move(str(document_path), str(dest_path))
+                logger.info(f"Moved processed document to {dest_path}")
                 
         except Exception as e:
             logger.error(f"Error exporting results: {str(e)}", exc_info=True)
             raise
 
     def _is_supported_file(self, file_path: Path) -> bool:
-        """Check if file is a supported resume format"""
+        """Check if file is a supported document format"""
         return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
 
-# Example usage
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+# # Example usage
+# if __name__ == "__main__":
+#     logging.basicConfig(level=logging.INFO)
     
-    evaluator = ResumeEvaluator(
-        evaluation_rules_path="candidate_evaluation_rules.json",
-        evaluation_steps_path="candidate_evaluation_steps.json",
-        output_dir="evaluation_results"
-    )
+#     evaluator = ResumeEvaluator(
+#         evaluation_rules_path="candidate_evaluation_rules.json",
+#         evaluation_steps_path="candidate_evaluation_steps.json",
+#         output_dir="evaluation_results"
+#     )
     
-    results = evaluator.evaluate_directory("resumes")
-    print(f"Processed {len(results)} resumes")
+#     results = evaluator.evaluate_directory("resumes")
+#     print(f"Processed {len(results)} resumes")
