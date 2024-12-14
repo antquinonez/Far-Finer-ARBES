@@ -23,12 +23,12 @@ logger.info("Starting application...")
 # ================================================================================
 
 evaluator = DocumentEvaluator(
-    evaluation_rules_path="candidate_evaluation_rules.json",
+    evaluation_rules_path="code_evaluation_rules.json",
     evaluation_steps_path="evaluation_steps.json",
     output_dir="evaluation_results"
 )
 
-results = evaluator.evaluate_directory("documents_to_evaluate/resumes")
+results = evaluator.evaluate_directory("documents_to_evaluate/code")
 
 # Log summary
 logger.info(f"Processed {len(results)} documents")
