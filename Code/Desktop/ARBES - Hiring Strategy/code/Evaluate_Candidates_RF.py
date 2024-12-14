@@ -1,5 +1,5 @@
 import logging
-from libs.ResumeEvaluator import ResumeEvaluator
+from libs.DocumentEvaluator import DocumentEvaluator
 import os
 
 # ================================================================================
@@ -20,16 +20,17 @@ logger = initialize_logging(
 logger.info("Starting application...")
 # ================================================================================
 # Initialize evaluator
-evaluator = ResumeEvaluator(
-    evaluation_rules_path="candidate_evaluation_rules.json",
+# ================================================================================
 
-    evaluation_steps_path="candidate_evaluation_steps.json",
+evaluator = DocumentEvaluator(
+    evaluation_rules_path="candidate_evaluation_rules.json",
+    evaluation_steps_path="evaluation_steps.json",
     output_dir="evaluation_results"
 )
 
-results = evaluator.evaluate_directory("resumes")
+results = evaluator.evaluate_directory("documents_to_evaluate")
 
 # Log summary
-logger.info(f"Processed {len(results)} resumes")
+logger.info(f"Processed {len(results)} documents")
 
 
