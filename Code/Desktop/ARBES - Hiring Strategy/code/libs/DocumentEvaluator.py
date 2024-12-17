@@ -202,16 +202,24 @@ class DocumentEvaluator:
         todays_date = date.today().strftime("%Y-%m-%d")
         
         system_instructions = (
+            "===================================================================================================\n"
             f"\nTODAY'S DATE: {todays_date}\n"
+            "===================================================================================================\n"
             "BASE SYSTEM INSTRUCTIONS\n"
+            "===================================================================================================\n"
             f"{base_instruction}\n"
         )
 
         if self.document_text:
             system_instructions = (
                 f"{system_instructions}\n"
+                "\n===================================================================================================\n"
                 "DOCUMENT TO BE EVALUATED TEXT\n"
+                "===================================================================================================\n"
                 f"{self.document_text}\n"
+                "===================================================================================================\n"
+                "END OF DOCUMENT TO BE EVALUATED TEXT\n"
+                "===================================================================================================\n"
             )
         else:
             raise ValueError("Document to be evaluated text must be loaded before getting system instructions")
@@ -223,6 +231,7 @@ class DocumentEvaluator:
         azure_client = FFAzureOpenAI(config={
             "system_instructions": system_instructions,
             "temperature": 0.5,
+            "infer_o1": True,
             "max_tokens": 16384
         })
         return AI(azure_client)
