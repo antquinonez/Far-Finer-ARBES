@@ -1,3 +1,6 @@
+# Copyright (c) 2024 Antonio Quinonez
+# Licensed under the MIT License. See LICENSE in the project root for license information.
+
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
@@ -122,7 +125,8 @@ class FFAI_AzureOpenAI:
                          model: Optional[str] = None,
                          prompt_name: Optional[str] = None,
                          history: Optional[List[str]] = None,
-                         dependencies: Optional[dict] = None ) -> str:
+                         dependencies: Optional[dict] = None,
+                         **kwargs ) -> str:
         """Generate response using Azure OpenAI"""
         logger.debug(f"\n===================================================================================")
         logger.info(f"Generating response for prompt: '{prompt}'")
@@ -130,6 +134,12 @@ class FFAI_AzureOpenAI:
         logger.debug(f"History: {history}") if history else logger.debug("No history provided")
 
         used_model = model if model else self.client.model
+        logger.debug(f"Using model: {used_model}")
+
+        # dedupe dependencies
+        if dependencies:
+            dependencies_set = set(dependencies)
+            dependencies = list(dependencies_set)
 
         try:
             # Build prompt with history
@@ -139,6 +149,8 @@ class FFAI_AzureOpenAI:
             # ==================================================================================
             # GENERATE RESPONSE USING THE WRAPPED CLIENT
             # ==================================================================================
+            # logger.debug(f"is_o1: {is_o1}")
+
             response = self.client.generate_response(prompt=final_prompt, model=used_model)
             logger.debug(f"Generated response: {response}")
 
@@ -238,7 +250,6 @@ class FFAI_AzureOpenAI:
 
     def clear_conversation(self):
         """Clear conversation in client but retain history"""
-        logger.info(f"Clearing conversation. Current history size: {len(self.history)}")
         self.client.clear_conversation()
 
     def get_interaction_history(self) -> List[Dict[str, Any]]:
@@ -248,6 +259,10 @@ class FFAI_AzureOpenAI:
     def get_clean_interaction_history(self) -> List[Dict[str, Any]]:
         """Get complete history"""
         return self.clean_history
+    
+    def get_prompt_attr_history(self) -> List[Dict[str, Any]]:
+        """Get prompt_attr_history"""
+        return self.prompt_attr_history
 
 
     def get_all_interactions(self) -> List[Dict[str, Any]]:

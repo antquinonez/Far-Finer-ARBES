@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Antonio Quinonez
+# Licensed under the MIT License. See LICENSE in the project root for license information.
 
 import logging
 from lib.ResumeEvaluator import ResumeEvaluator

@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import groupby
 from typing import List, Tuple, Dict
 import textwrap
+import re
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.readers import SimpleDirectoryReader
@@ -27,6 +28,10 @@ from lib.AI.FFAI_AzureOpenAI import FFAI_AzureOpenAI as AI
 from lib.AI.FFAzureOpenAI import FFAzureOpenAI
 
 from libs.FieldFormatter import FieldFormatter
+from libs.OutputTextCleaner import OutputTextCleaner
+from libs.InputTextCleaner import InputTextCleaner
+from libs.SafeJSONEncoder import SafeJSONEncoder, safe_json_loads, safe_json_dumps
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -176,8 +181,8 @@ class DocumentEvaluator:
     def _load_json(self, file_path: str) -> Dict:
         """Load and parse a JSON file"""
         try:
-            with open(file_path, 'r') as f:
-                return json.load(f)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return safe_json_loads(f.read())
         except Exception as e:
             logger.error(f"Error loading JSON file {file_path}: {str(e)}")
             raise
@@ -202,16 +207,27 @@ class DocumentEvaluator:
         todays_date = date.today().strftime("%Y-%m-%d")
         
         system_instructions = (
+            "===================================================================================================\n"
             f"\nTODAY'S DATE: {todays_date}\n"
+            "===================================================================================================\n"
             "BASE SYSTEM INSTRUCTIONS\n"
+            "===================================================================================================\n"
             f"{base_instruction}\n"
+            "===================================================================================================\n"
+            f"OUTPUT ENCODING: ISO-8859-1\n"
+            "===================================================================================================\n"
         )
 
         if self.document_text:
             system_instructions = (
                 f"{system_instructions}\n"
+                "\n===================================================================================================\n"
                 "DOCUMENT TO BE EVALUATED TEXT\n"
+                "===================================================================================================\n"
                 f"{self.document_text}\n"
+                "===================================================================================================\n"
+                "END OF DOCUMENT TO BE EVALUATED TEXT\n"
+                "===================================================================================================\n"
             )
         else:
             raise ValueError("Document to be evaluated text must be loaded before getting system instructions")
@@ -223,6 +239,7 @@ class DocumentEvaluator:
         azure_client = FFAzureOpenAI(config={
             "system_instructions": system_instructions,
             "temperature": 0.5,
+            "infer_o1": True,
             "max_tokens": 16384
         })
         return AI(azure_client)
@@ -280,12 +297,6 @@ class DocumentEvaluator:
         logger.debug(f"Batches: {batches}")
         return batches
 
-    @backoff.on_exception(
-        backoff.expo,
-        Exception,
-        max_tries=3,
-        max_time=300
-    )
     def _evaluate_batch(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
         """Evaluate a batch of rules together"""
         logger.info(f"Evaluating batch with {len(batch)} rules")
@@ -308,31 +319,51 @@ class DocumentEvaluator:
                 giveup=lambda e: not isinstance(e, Exception) or not str(e).startswith('429')
             )
             def execute_batch():
-                return self.llm.generate_response(
+                response = self.llm.generate_response(
                     prompt=combined_prompt,
                     prompt_name=rules,
                     model=model,
                     history=history_items,
                     dependencies=self._get_all_data_dependencies()
                 )
+                
+                # Add validation for empty response
+                if not response or response.isspace():
+                    logger.error("Received empty response from LLM")
+                    raise ValueError("Empty response received from LLM")
+                    
+                return response
             
-            response = execute_batch()
-            results = self._process_evaluation_response(response)
-            
-            for rule_name, rule in batch:
-                if rule_name in results:
-                    stage = self._get_rule_stage(rule)
-                    self.stage_results[stage][rule_name] = results[rule_name]
-                else:
+            try:
+                response = execute_batch()
+                results = self._process_evaluation_response(response)
+                
+                for rule_name, rule in batch:
+                    if rule_name in results:
+                        stage = self._get_rule_stage(rule)
+                        self.stage_results[stage][rule_name] = results[rule_name]
+                    else:
+                        self._add_to_cannot_evaluate(
+                            rule_name, 
+                            rule,
+                            "No result in batch response"
+                        )
+                
+                time.sleep(5)
+                return results
+                
+            except ValueError as ve:
+                # Handle empty response specifically
+                logger.error(f"Batch execution failed: {str(ve)}")
+                for rule_name, rule in batch:
                     self._add_to_cannot_evaluate(
-                        rule_name, 
+                        rule_name,
                         rule,
-                        "No result in batch response"
+                        f"Failed to get valid response: {str(ve)}"
                     )
-            
-            time.sleep(5)
-            return results
-            
+                # Try evaluating rules individually as fallback
+                return self._evaluate_batch_fallback(batch, model)
+                
         except Exception as e:
             logger.error(f"Error evaluating batch: {str(e)}", exc_info=True)
             for rule_name, rule in batch:
@@ -341,8 +372,29 @@ class DocumentEvaluator:
                     rule,
                     f"Batch evaluation failed: {str(e)}"
                 )
-            # raise
-            sys.exit(1)
+            # Try fallback to individual evaluation
+            return self._evaluate_batch_fallback(batch, model)
+
+    def _evaluate_batch_fallback(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
+        """Fallback method to evaluate batch rules individually"""
+        logger.info("Attempting individual evaluation fallback for failed batch")
+        results = {}
+        
+        for rule_name, rule in batch:
+            try:
+                # Add delay between individual evaluations
+                time.sleep(2)
+                rule_result = self._evaluate_single_rule(rule_name, rule, use_steps=False)
+                results.update(rule_result)
+            except Exception as e:
+                logger.error(f"Fallback evaluation failed for {rule_name}: {str(e)}")
+                self._add_to_cannot_evaluate(
+                    rule_name,
+                    rule,
+                    f"Fallback evaluation failed: {str(e)}"
+                )
+        
+        return results
 
     def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> Tuple[str, List]:
         """
@@ -455,31 +507,59 @@ class DocumentEvaluator:
 
     def _prepare_single_rule_prompt(self, rule_name: str, rule: Dict[str, Any]) -> str:
         """Prepare evaluation prompt for a single rule"""
+        cleaned_rule = InputTextCleaner.clean_dict_values(rule)
+
         prompt = (
             f"Please evaluate the following attribute:\n\n"
             f"Attribute Name: {rule_name}\n"
-            f"Description: {rule.get('Description', '')}\n"
+            f"Description: {cleaned_rule.get('Description', '')}\n"
         )
         
-        if rule.get('Specification'):
-            prompt += f"Specification for Attribute 'value' field : {rule['Specification']}\n"
+        if cleaned_rule.get('Specification'):
+            prompt += f"Specification for Attribute 'value' field : {cleaned_rule['Specification']}\n"
             
         prompt += "\nPlease provide your evaluation in JSON format."
         logger.debug(f"Prepared single rule prompt: {prompt}")
         
         return prompt
 
-    def _process_evaluation_response(self, response: str) -> Dict:
-        """Process and validate the evaluation response"""
+    def _process_evaluation_response(self, response: str) -> Dict[str, Any]:
+        """
+        Process and validate the evaluation response with comprehensive character cleaning.
+        """
         try:
-            json_text = response[response.find('{'):response.rfind('}')+1]
-            results = json.loads(json_text)
-            
-            for field_name, field_value in results.items():
+            # Log the raw response
+            logger.debug("Raw response received:")
+            logger.debug("=" * 80)
+            logger.debug(repr(response))
+            logger.debug("=" * 80)
+
+            # Clean and extract JSON content
+            cleaned_text = OutputTextCleaner.clean_text(response)
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', cleaned_text, re.DOTALL)
+            if json_match:
+                json_text = json_match.group(1)
+            else:
+                json_start = cleaned_text.find('{')
+                json_end = cleaned_text.rfind('}')
+                if json_start != -1 and json_end != -1:
+                    json_text = cleaned_text[json_start:json_end + 1]
+                else:
+                    logger.warning("No JSON content found in response")
+                    json_text = ''
+                    # raise ValueError("No JSON content found in response")
+
+            # Parse JSON using safe loader
+            results = safe_json_loads(json_text)
+            cleaned_results = OutputTextCleaner.clean_dict_values(results)
+
+            # Process and validate the structure
+            processed_results = {}
+            for field_name, field_value in cleaned_results.items():
                 rule = self.evaluation_rules.get(field_name, {})
                 
                 if not isinstance(field_value, dict) or 'type' not in field_value:
-                    results[field_name] = {
+                    processed_results[field_name] = {
                         "type": rule.get('Type', 'Core'),
                         "sub_type": rule.get('Sub_Type', 'None'),
                         "value": field_value,
@@ -487,11 +567,14 @@ class DocumentEvaluator:
                         "source": ["document"],
                         "source_detail": ["Document content"]
                     }
-            
-            return results
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing evaluation response: {str(e)}")
+                else:
+                    processed_results[field_name] = field_value
+
+            return processed_results
+
+        except Exception as e:
+            logger.error(f"Error processing evaluation response: {str(e)}")
+            logger.error(f"Raw response that caused error: {repr(response)}")
             raise
 
     def _add_to_cannot_evaluate(self, rule_name: str, rule: Dict, reason: str) -> None:
@@ -801,8 +884,8 @@ class DocumentEvaluator:
         try:
             combined_results = self.get_combined_evaluation()
             
-            with open(output_path, 'w') as f:
-                json.dump(combined_results, f, indent=2)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(safe_json_dumps(combined_results, indent=2))
             logger.info(f"Results exported to {output_path}")
             
             if self.current_document_path:
