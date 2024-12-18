@@ -136,6 +136,10 @@ class FFAI_AzureOpenAI:
         used_model = model if model else self.client.model
         logger.debug(f"Using model: {used_model}")
 
+        # dedupe dependencies
+        dependencies_set = set(dependencies)
+        dependencies = list(dependencies_set)
+
         try:
             # Build prompt with history
             final_prompt = self._build_prompt(prompt, history, dependencies)
