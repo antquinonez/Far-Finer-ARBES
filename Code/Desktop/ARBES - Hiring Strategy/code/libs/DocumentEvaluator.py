@@ -30,6 +30,7 @@ from lib.AI.FFAzureOpenAI import FFAzureOpenAI
 from libs.FieldFormatter import FieldFormatter
 from libs.OutputTextCleaner import OutputTextCleaner
 from libs.InputTextCleaner import InputTextCleaner
+from libs.SafeJSONEncoder import SafeJSONEncoder, safe_json_loads, safe_json_dumps
 
 
 # Configure logging
@@ -180,8 +181,8 @@ class DocumentEvaluator:
     def _load_json(self, file_path: str) -> Dict:
         """Load and parse a JSON file"""
         try:
-            with open(file_path, 'r') as f:
-                return json.load(f)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return safe_json_loads(f.read())
         except Exception as e:
             logger.error(f"Error loading JSON file {file_path}: {str(e)}")
             raise
@@ -296,12 +297,6 @@ class DocumentEvaluator:
         logger.debug(f"Batches: {batches}")
         return batches
 
-    @backoff.on_exception(
-        backoff.expo,
-        Exception,
-        max_tries=3,
-        max_time=300
-    )
     def _evaluate_batch(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
         """Evaluate a batch of rules together"""
         logger.info(f"Evaluating batch with {len(batch)} rules")
@@ -324,31 +319,51 @@ class DocumentEvaluator:
                 giveup=lambda e: not isinstance(e, Exception) or not str(e).startswith('429')
             )
             def execute_batch():
-                return self.llm.generate_response(
+                response = self.llm.generate_response(
                     prompt=combined_prompt,
                     prompt_name=rules,
                     model=model,
                     history=history_items,
                     dependencies=self._get_all_data_dependencies()
                 )
+                
+                # Add validation for empty response
+                if not response or response.isspace():
+                    logger.error("Received empty response from LLM")
+                    raise ValueError("Empty response received from LLM")
+                    
+                return response
             
-            response = execute_batch()
-            results = self._process_evaluation_response(response)
-            
-            for rule_name, rule in batch:
-                if rule_name in results:
-                    stage = self._get_rule_stage(rule)
-                    self.stage_results[stage][rule_name] = results[rule_name]
-                else:
+            try:
+                response = execute_batch()
+                results = self._process_evaluation_response(response)
+                
+                for rule_name, rule in batch:
+                    if rule_name in results:
+                        stage = self._get_rule_stage(rule)
+                        self.stage_results[stage][rule_name] = results[rule_name]
+                    else:
+                        self._add_to_cannot_evaluate(
+                            rule_name, 
+                            rule,
+                            "No result in batch response"
+                        )
+                
+                time.sleep(5)
+                return results
+                
+            except ValueError as ve:
+                # Handle empty response specifically
+                logger.error(f"Batch execution failed: {str(ve)}")
+                for rule_name, rule in batch:
                     self._add_to_cannot_evaluate(
-                        rule_name, 
+                        rule_name,
                         rule,
-                        "No result in batch response"
+                        f"Failed to get valid response: {str(ve)}"
                     )
-            
-            time.sleep(5)
-            return results
-            
+                # Try evaluating rules individually as fallback
+                return self._evaluate_batch_fallback(batch, model)
+                
         except Exception as e:
             logger.error(f"Error evaluating batch: {str(e)}", exc_info=True)
             for rule_name, rule in batch:
@@ -357,8 +372,29 @@ class DocumentEvaluator:
                     rule,
                     f"Batch evaluation failed: {str(e)}"
                 )
-            # raise
-            sys.exit(1)
+            # Try fallback to individual evaluation
+            return self._evaluate_batch_fallback(batch, model)
+
+    def _evaluate_batch_fallback(self, batch: List[Tuple[str, Dict]], model: str) -> Dict[str, Any]:
+        """Fallback method to evaluate batch rules individually"""
+        logger.info("Attempting individual evaluation fallback for failed batch")
+        results = {}
+        
+        for rule_name, rule in batch:
+            try:
+                # Add delay between individual evaluations
+                time.sleep(2)
+                rule_result = self._evaluate_single_rule(rule_name, rule, use_steps=False)
+                results.update(rule_result)
+            except Exception as e:
+                logger.error(f"Fallback evaluation failed for {rule_name}: {str(e)}")
+                self._add_to_cannot_evaluate(
+                    rule_name,
+                    rule,
+                    f"Fallback evaluation failed: {str(e)}"
+                )
+        
+        return results
 
     def _prepare_batch_prompt(self, batch: List[Tuple[str, Dict]]) -> Tuple[str, List]:
         """
@@ -509,10 +545,12 @@ class DocumentEvaluator:
                 if json_start != -1 and json_end != -1:
                     json_text = cleaned_text[json_start:json_end + 1]
                 else:
-                    raise ValueError("No JSON content found in response")
+                    logger.warning("No JSON content found in response")
+                    json_text = ''
+                    # raise ValueError("No JSON content found in response")
 
-            # Parse JSON and clean all string values
-            results = json.loads(json_text)
+            # Parse JSON using safe loader
+            results = safe_json_loads(json_text)
             cleaned_results = OutputTextCleaner.clean_dict_values(results)
 
             # Process and validate the structure
@@ -846,8 +884,8 @@ class DocumentEvaluator:
         try:
             combined_results = self.get_combined_evaluation()
             
-            with open(output_path, 'w') as f:
-                json.dump(combined_results, f, indent=2)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(safe_json_dumps(combined_results, indent=2))
             logger.info(f"Results exported to {output_path}")
             
             if self.current_document_path:
