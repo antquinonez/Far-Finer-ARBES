@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import groupby
 from typing import List, Tuple, Dict
 import textwrap
+import re
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.readers import SimpleDirectoryReader
@@ -27,6 +28,9 @@ from lib.AI.FFAI_AzureOpenAI import FFAI_AzureOpenAI as AI
 from lib.AI.FFAzureOpenAI import FFAzureOpenAI
 
 from libs.FieldFormatter import FieldFormatter
+from libs.OutputTextCleaner import OutputTextCleaner
+from libs.InputTextCleaner import InputTextCleaner
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -208,6 +212,9 @@ class DocumentEvaluator:
             "BASE SYSTEM INSTRUCTIONS\n"
             "===================================================================================================\n"
             f"{base_instruction}\n"
+            "===================================================================================================\n"
+            f"OUTPUT ENCODING: ISO-8859-1\n"
+            "===================================================================================================\n"
         )
 
         if self.document_text:
@@ -464,31 +471,57 @@ class DocumentEvaluator:
 
     def _prepare_single_rule_prompt(self, rule_name: str, rule: Dict[str, Any]) -> str:
         """Prepare evaluation prompt for a single rule"""
+        cleaned_rule = InputTextCleaner.clean_dict_values(rule)
+
         prompt = (
             f"Please evaluate the following attribute:\n\n"
             f"Attribute Name: {rule_name}\n"
-            f"Description: {rule.get('Description', '')}\n"
+            f"Description: {cleaned_rule.get('Description', '')}\n"
         )
         
-        if rule.get('Specification'):
-            prompt += f"Specification for Attribute 'value' field : {rule['Specification']}\n"
+        if cleaned_rule.get('Specification'):
+            prompt += f"Specification for Attribute 'value' field : {cleaned_rule['Specification']}\n"
             
         prompt += "\nPlease provide your evaluation in JSON format."
         logger.debug(f"Prepared single rule prompt: {prompt}")
         
         return prompt
 
-    def _process_evaluation_response(self, response: str) -> Dict:
-        """Process and validate the evaluation response"""
+    def _process_evaluation_response(self, response: str) -> Dict[str, Any]:
+        """
+        Process and validate the evaluation response with comprehensive character cleaning.
+        """
         try:
-            json_text = response[response.find('{'):response.rfind('}')+1]
+            # Log the raw response
+            logger.debug("Raw response received:")
+            logger.debug("=" * 80)
+            logger.debug(repr(response))
+            logger.debug("=" * 80)
+
+            # Clean and extract JSON content
+            cleaned_text = OutputTextCleaner.clean_text(response)
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', cleaned_text, re.DOTALL)
+            if json_match:
+                json_text = json_match.group(1)
+            else:
+                json_start = cleaned_text.find('{')
+                json_end = cleaned_text.rfind('}')
+                if json_start != -1 and json_end != -1:
+                    json_text = cleaned_text[json_start:json_end + 1]
+                else:
+                    raise ValueError("No JSON content found in response")
+
+            # Parse JSON and clean all string values
             results = json.loads(json_text)
-            
-            for field_name, field_value in results.items():
+            cleaned_results = OutputTextCleaner.clean_dict_values(results)
+
+            # Process and validate the structure
+            processed_results = {}
+            for field_name, field_value in cleaned_results.items():
                 rule = self.evaluation_rules.get(field_name, {})
                 
                 if not isinstance(field_value, dict) or 'type' not in field_value:
-                    results[field_name] = {
+                    processed_results[field_name] = {
                         "type": rule.get('Type', 'Core'),
                         "sub_type": rule.get('Sub_Type', 'None'),
                         "value": field_value,
@@ -496,11 +529,14 @@ class DocumentEvaluator:
                         "source": ["document"],
                         "source_detail": ["Document content"]
                     }
-            
-            return results
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing evaluation response: {str(e)}")
+                else:
+                    processed_results[field_name] = field_value
+
+            return processed_results
+
+        except Exception as e:
+            logger.error(f"Error processing evaluation response: {str(e)}")
+            logger.error(f"Raw response that caused error: {repr(response)}")
             raise
 
     def _add_to_cannot_evaluate(self, rule_name: str, rule: Dict, reason: str) -> None:
