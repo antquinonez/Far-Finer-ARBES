@@ -137,8 +137,9 @@ class FFAI_AzureOpenAI:
         logger.debug(f"Using model: {used_model}")
 
         # dedupe dependencies
-        dependencies_set = set(dependencies)
-        dependencies = list(dependencies_set)
+        if dependencies:
+            dependencies_set = set(dependencies)
+            dependencies = list(dependencies_set)
 
         try:
             # Build prompt with history
